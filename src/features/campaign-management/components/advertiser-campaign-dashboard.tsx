@@ -136,7 +136,7 @@ export const AdvertiserCampaignDashboard = () => {
                 key={campaign.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
-                <div className="relative block aspect-[3/2]">
+                <a href={`/advertiser/campaigns/${campaign.id}`} className="relative block aspect-[3/2]">
                   <Image
                     src={thumbnail}
                     alt={campaign.title}
@@ -144,7 +144,7 @@ export const AdvertiserCampaignDashboard = () => {
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
-                </div>
+                </a>
                 <div className="flex flex-1 flex-col gap-4 p-6">
                   <div className="flex items-center justify-between">
                     <Badge variant={campaign.status === "recruiting" ? "default" : "secondary"}>
@@ -153,7 +153,7 @@ export const AdvertiserCampaignDashboard = () => {
                     <span className="text-xs text-slate-500">모집 기간 {dateLabel}</span>
                   </div>
                   <h2 className="text-lg font-semibold text-slate-900 line-clamp-2">
-                    {campaign.title}
+                    <a href={`/advertiser/campaigns/${campaign.id}`}>{campaign.title}</a>
                   </h2>
                   <p className="text-sm text-slate-600 line-clamp-2">미션: {campaign.mission}</p>
                   <p className="text-sm text-slate-600 line-clamp-2">혜택: {campaign.benefits}</p>

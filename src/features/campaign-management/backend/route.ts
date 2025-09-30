@@ -12,10 +12,13 @@ import {
 import {
   AdvertiserCampaignQuerySchema,
   CampaignCreateRequestSchema,
+  CampaignActionRequestSchema,
 } from '@/features/campaign-management/backend/schema';
 import {
   getAdvertiserCampaigns,
   createCampaign,
+  getCampaignManagementDetail,
+  handleCampaignAction,
 } from '@/features/campaign-management/backend/service';
 import { campaignErrorCodes } from '@/features/campaigns/backend/error';
 
@@ -132,6 +135,74 @@ export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
       supabase,
       authResult.data.userId,
       parsed.data,
+    );
+
+    return respond(c, result);
+  });
+
+  app.get('/advertiser/campaigns/:campaignId', async (c) => {
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    const campaignId = c.req.param('campaignId');
+
+    const supabase = getSupabase(c);
+    const result = await getCampaignManagementDetail(
+      supabase,
+      authResult.data.userId,
+      campaignId,
+    );
+
+    return respond(c, result);
+  });
+
+  app.post('/advertiser/campaigns/:campaignId/actions', async (c) => {
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await c.req.json();
+    } catch (error) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '요청 본문을 해석할 수 없습니다.',
+          error instanceof Error ? error.message : String(error),
+        ),
+      );
+    }
+
+    const parseResult = CampaignActionRequestSchema.safeParse(payload);
+
+    if (!parseResult.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '요청 값이 올바르지 않습니다.',
+          parseResult.error.format(),
+        ),
+      );
+    }
+
+    const campaignId = c.req.param('campaignId');
+    const supabase = getSupabase(c);
+    const result = await handleCampaignAction(
+      supabase,
+      authResult.data.userId,
+      campaignId,
+      parseResult.data,
     );
 
     return respond(c, result);

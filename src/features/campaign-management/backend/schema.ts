@@ -5,6 +5,7 @@ import {
   MIN_CAMPAIGN_CAPACITY,
   MAX_CAMPAIGN_CAPACITY,
 } from '@/features/campaign-management/constants';
+import { z } from 'zod';
 
 export const AdvertiserCampaignQuerySchema = z.object({
   sort: z
@@ -100,3 +101,69 @@ export const CampaignCreateResponseSchema = z.object({
 });
 
 export type CampaignCreateResponse = z.infer<typeof CampaignCreateResponseSchema>;
+
+export const CampaignManagementApplicantSchema = z.object({
+  applicationId: z.string().uuid(),
+  influencerId: z.string().uuid(),
+  influencerName: z.string().nullable(),
+  status: z.enum(['applied', 'selected', 'rejected']),
+  motivation: z.string().nullable(),
+  visitPlanDate: z.string(),
+  submittedAt: z.string(),
+});
+
+export type CampaignManagementApplicant = z.infer<
+  typeof CampaignManagementApplicantSchema
+>;
+
+export const CampaignManagementDetailSchema = z.object({
+  campaign: z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    recruitmentStartAt: z.string(),
+    recruitmentEndAt: z.string(),
+    capacity: z.number().int().nonnegative(),
+    benefits: z.string(),
+    mission: z.string(),
+    storeInfo: z.string(),
+    status: z.enum(CAMPAIGN_STATUS_OPTIONS),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+  applicants: z.array(CampaignManagementApplicantSchema),
+  actions: z.object({
+    canCloseRecruitment: z.boolean(),
+    canSelectApplicants: z.boolean(),
+    capacity: z.number().int().nonnegative(),
+  }),
+});
+
+export type CampaignManagementDetail = z.infer<
+  typeof CampaignManagementDetailSchema
+>;
+
+export const CampaignManagementDetailResponseSchema = z.object({
+  detail: CampaignManagementDetailSchema,
+});
+
+export type CampaignManagementDetailResponse = z.infer<
+  typeof CampaignManagementDetailResponseSchema
+>;
+
+export const CampaignActionRequestSchema = z.union([
+  z.object({
+    action: z.literal('closeRecruitment'),
+  }),
+  z.object({
+    action: z.literal('selectApplicants'),
+    applicantIds: z.array(z.string().uuid()).min(1, '선정할 인원을 선택해 주세요.'),
+  }),
+]);
+
+export type CampaignActionRequest = z.infer<typeof CampaignActionRequestSchema>;
+
+export const CampaignActionResponseSchema = CampaignManagementDetailResponseSchema;
+
+export type CampaignActionResponse = z.infer<
+  typeof CampaignActionResponseSchema
+>;
