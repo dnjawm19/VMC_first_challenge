@@ -74,6 +74,7 @@ export const createSignup = async (
       phone: normalizedPhone,
       role: payload.role,
       auth_method: payload.authMethod,
+      birth_date: payload.birthDate,
     });
 
   if (profileError) {
@@ -141,7 +142,7 @@ export const getInfluencerProfile = async (
 
   const { data: channelData, error: channelError } = await client
     .from(INFLUENCER_CHANNELS_TABLE)
-    .select("id, channel_type, channel_name, channel_url, status")
+    .select("id, channel_type, channel_name, channel_url, status, follower_count")
     .eq("influencer_user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -167,6 +168,7 @@ export const getInfluencerProfile = async (
       name: channel.channel_name,
       url: channel.channel_url,
       status: channel.status,
+      followerCount: channel.follower_count ?? 0,
     })),
   });
 
@@ -195,6 +197,7 @@ export const upsertInfluencerProfile = async (
     type: InfluencerProfileUpsertRequest["channels"][number]["type"];
     name: string;
     url: string;
+    followerCount: number;
   }> = [];
 
   for (const channel of payloadParse.data.channels) {
@@ -212,6 +215,7 @@ export const upsertInfluencerProfile = async (
       type: channel.type,
       name: channel.name,
       url: normalized.value.url,
+      followerCount: channel.followerCount,
     });
   }
 
@@ -257,6 +261,7 @@ export const upsertInfluencerProfile = async (
           channel_name: channel.name,
           channel_url: channel.url,
           status: "pending",
+          follower_count: channel.followerCount,
         }))
       );
 
@@ -281,7 +286,7 @@ export const getAdvertiserProfile = async (
   const { data, error } = await client
     .from(ADVERTISER_PROFILES_TABLE)
     .select(
-      "company_name, location, category, business_registration_number, verification_status"
+      "company_name, address, store_phone, business_registration_number, representative_name, verification_status"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -298,8 +303,9 @@ export const getAdvertiserProfile = async (
     profile: data
       ? {
           companyName: data.company_name,
-          location: data.location,
-          category: data.category,
+          address: data.address,
+          storePhone: data.store_phone,
+          representativeName: data.representative_name,
           businessRegistrationNumber: data.business_registration_number,
           verificationStatus: data.verification_status ?? "pending",
         }
@@ -330,6 +336,7 @@ export const upsertAdvertiserProfile = async (
   const normalizedBusinessNumber = normalizeBusinessNumber(
     parsed.data.businessRegistrationNumber
   );
+  const normalizedStorePhone = parsed.data.storePhone.replace(/[^0-9]/g, "");
 
   if (!isValidBusinessNumber(normalizedBusinessNumber)) {
     return failure(
@@ -343,8 +350,9 @@ export const upsertAdvertiserProfile = async (
     {
       user_id: userId,
       company_name: parsed.data.companyName,
-      location: parsed.data.location,
-      category: parsed.data.category,
+      address: parsed.data.address,
+      store_phone: normalizedStorePhone,
+      representative_name: parsed.data.representativeName,
       business_registration_number: normalizedBusinessNumber,
       verification_status: "pending",
     },

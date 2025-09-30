@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { format } from "date-fns";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,46 @@ export const AdvertiserCampaignDashboard = () => {
       });
     }
   }, [error, toast]);
+
+  if (error) {
+    const needsProfile = error.message.includes('광고주 정보 등록');
+
+    return (
+      <section className="space-y-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">체험단 관리</h1>
+            <p className="text-sm text-slate-500">
+              등록한 체험단을 확인하고 새로운 체험단을 생성할 수 있습니다.
+            </p>
+          </div>
+          <CampaignCreateDialog disabled />
+        </header>
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-10 text-center">
+          <AlertTriangle className="h-12 w-12 text-amber-500" />
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-slate-900">
+              {needsProfile ? '광고주 정보를 먼저 등록해 주세요.' : '체험단 목록을 불러올 수 없습니다.'}
+            </p>
+            <p className="text-sm text-slate-500">
+              {needsProfile
+                ? '사업자 정보를 등록하면 체험단 관리 대시보드를 이용할 수 있습니다.'
+                : error.message}
+            </p>
+          </div>
+          {needsProfile ? (
+            <Link
+              href="/onboarding/advertiser"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+            >
+              광고주 정보 등록하기
+              <PlusCircle className="h-4 w-4" />
+            </Link>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-6">
@@ -136,7 +177,7 @@ export const AdvertiserCampaignDashboard = () => {
                 key={campaign.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
-                <a href={`/advertiser/campaigns/${campaign.id}`} className="relative block aspect-[3/2]">
+                <Link href={`/advertiser/campaigns/${campaign.id}`} className="relative block aspect-[3/2]">
                   <Image
                     src={thumbnail}
                     alt={campaign.title}
@@ -144,7 +185,7 @@ export const AdvertiserCampaignDashboard = () => {
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
-                </a>
+                </Link>
                 <div className="flex flex-1 flex-col gap-4 p-6">
                   <div className="flex items-center justify-between">
                     <Badge variant={campaign.status === "recruiting" ? "default" : "secondary"}>
@@ -153,7 +194,7 @@ export const AdvertiserCampaignDashboard = () => {
                     <span className="text-xs text-slate-500">모집 기간 {dateLabel}</span>
                   </div>
                   <h2 className="text-lg font-semibold text-slate-900 line-clamp-2">
-                    <a href={`/advertiser/campaigns/${campaign.id}`}>{campaign.title}</a>
+                    <Link href={`/advertiser/campaigns/${campaign.id}`}>{campaign.title}</Link>
                   </h2>
                   <p className="text-sm text-slate-600 line-clamp-2">미션: {campaign.mission}</p>
                   <p className="text-sm text-slate-600 line-clamp-2">혜택: {campaign.benefits}</p>

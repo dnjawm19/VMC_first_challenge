@@ -500,7 +500,9 @@ export const handleCampaignAction = async (
   let rejectError = null;
 
   if (selectedIds.length > 0) {
-    const notInClause = `(${selectedIds.map((id) => `"${id}"`).join(',')})`;
+    const notInClause = `(${selectedIds
+      .map((id) => `'${id}'`)
+      .join(',')})`;
     const { error } = await client
       .from(CAMPAIGN_APPLICATIONS_TABLE)
       .update({ status: 'rejected' })
@@ -508,10 +510,6 @@ export const handleCampaignAction = async (
       .not('id', 'in', notInClause);
 
     rejectError = error;
-  }
-
-  if (!rejectError && selectedIds.length === 0) {
-    rejectError = null;
   }
 
   if (rejectError) {

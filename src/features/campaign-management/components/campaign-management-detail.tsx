@@ -31,6 +31,24 @@ export const CampaignManagementDetail = ({ campaignId }: CampaignManagementDetai
     }
   }, [error, toast]);
 
+  if (error) {
+    const needsProfile = error.message.includes('광고주 정보 등록');
+
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 shadow-sm">
+        <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+        <p className="text-lg font-semibold text-slate-900">
+          {needsProfile ? '광고주 정보를 먼저 등록해 주세요.' : '체험단 정보를 불러오지 못했습니다.'}
+        </p>
+        <p className="mt-2">
+          {needsProfile
+            ? '사업자 정보를 등록한 뒤 다시 시도해 주세요.'
+            : error.message}
+        </p>
+      </div>
+    );
+  }
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6">

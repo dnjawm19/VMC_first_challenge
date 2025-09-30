@@ -66,6 +66,7 @@ export type SignupFormValues = z.infer<typeof SignupFormSchema>;
 const createDefaultFormValues = (): SignupFormValues => ({
   fullName: "",
   phone: "",
+  birthDate: "",
   email: "",
   password: "",
   confirmPassword: "",
@@ -107,6 +108,7 @@ export const SignupRoleForm = () => {
         {
           fullName: values.fullName,
           phone: values.phone,
+          birthDate: values.birthDate,
           email: values.email,
           password: values.password,
           role: values.role,
@@ -142,7 +144,7 @@ export const SignupRoleForm = () => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col gap-6"
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <FormField
             control={form.control}
             name="fullName"
@@ -164,6 +166,19 @@ export const SignupRoleForm = () => {
                 <FormLabel>휴대폰 번호</FormLabel>
                 <FormControl>
                   <Input placeholder="010-1234-5678" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="birthDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>생년월일</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

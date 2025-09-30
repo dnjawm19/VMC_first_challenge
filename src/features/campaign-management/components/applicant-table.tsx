@@ -41,6 +41,14 @@ export const ApplicantTable = ({
     onSelectionChange(Array.from(next));
   };
 
+  if (applicants.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+        아직 지원한 인플루언서가 없습니다. 모집 기간 동안 지원자를 기다려 주세요.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200">
       <table className="w-full table-auto text-left">

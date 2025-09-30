@@ -44,6 +44,7 @@ const createDefaultChannel = (): InfluencerFormValues["channels"][number] => ({
   type: INFLUENCER_CHANNEL_TYPES[0],
   name: "",
   url: "",
+  followerCount: 0,
 });
 
 const createDefaultValues = (): InfluencerFormValues => ({
@@ -86,6 +87,7 @@ export const InfluencerProfileForm = () => {
               type: channel.type,
               name: channel.name,
               url: channel.url,
+              followerCount: channel.followerCount ?? 0,
             }))
           : [createDefaultChannel()],
     });
@@ -233,6 +235,28 @@ export const InfluencerProfileForm = () => {
                               placeholder="https://"
                               inputMode="url"
                               {...urlField}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`channels.${index}.followerCount`}
+                      render={({ field: followerField }) => (
+                        <FormItem className="w-full lg:max-w-[180px]">
+                          <FormLabel>팔로워 수</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={String(followerField.value ?? 0)}
+                              onChange={(event) =>
+                                followerField.onChange(
+                                  Number(event.target.value ?? 0)
+                                )
+                              }
                             />
                           </FormControl>
                           <FormMessage />

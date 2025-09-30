@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,18 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ADVERTISER_CATEGORIES,
-  ADVERTISER_CATEGORY_LABELS,
-} from "@/features/onboarding/constants";
 import {
   AdvertiserProfileUpsertRequestSchema,
   type AdvertiserProfileUpsertRequest,
@@ -42,13 +31,28 @@ type AdvertiserFormValues = z.infer<typeof AdvertiserFormSchema>;
 
 const createDefaultValues = (): AdvertiserFormValues => ({
   companyName: "",
-  location: "",
-  category: ADVERTISER_CATEGORIES[0],
+  address: "",
+  storePhone: "",
   businessRegistrationNumber: "",
+  representativeName: "",
 });
 
 const formatBusinessNumber = (value: string) =>
   value.replace(/[^0-9]/g, "").replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
+
+const formatPhoneNumber = (value: string) => {
+  const digitsOnly = value.replace(/[^0-9]/g, "");
+
+  if (digitsOnly.length <= 3) {
+    return digitsOnly;
+  }
+
+  if (digitsOnly.length <= 7) {
+    return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
+  }
+
+  return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 7)}-${digitsOnly.slice(7, 11)}`;
+};
 
 export const AdvertiserProfileForm = () => {
   const { toast } = useToast();
@@ -60,8 +64,6 @@ export const AdvertiserProfileForm = () => {
     resolver: zodResolver(AdvertiserFormSchema),
     defaultValues: createDefaultValues(),
   });
-
-  const categoryOptions = useMemo(() => ADVERTISER_CATEGORIES, []);
 
   useEffect(() => {
     if (profileQuery.isError && profileQuery.error) {
@@ -83,9 +85,10 @@ export const AdvertiserProfileForm = () => {
 
     form.reset({
       companyName: profile.companyName,
-      location: profile.location,
-      category: profile.category,
+      address: profile.address,
+      storePhone: profile.storePhone,
       businessRegistrationNumber: profile.businessRegistrationNumber,
+      representativeName: profile.representativeName,
     });
   }, [form, profileQuery.data]);
 
@@ -98,6 +101,7 @@ export const AdvertiserProfileForm = () => {
     mutation.mutate(
       {
         ...values,
+        storePhone: values.storePhone.replace(/[^0-9]/g, ""),
         businessRegistrationNumber: values.businessRegistrationNumber.replace(
           /[^0-9]/g,
           ""
@@ -169,10 +173,10 @@ export const AdvertiserProfileForm = () => {
               />
               <FormField
                 control={form.control}
-                name="location"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>매장 위치</FormLabel>
+                    <FormLabel>주소</FormLabel>
                     <FormControl>
                       <Input placeholder="서울시 강남구 ..." {...field} />
                     </FormControl>
@@ -184,57 +188,65 @@ export const AdvertiserProfileForm = () => {
             <div className="grid gap-6 lg:grid-cols-2">
               <FormField
                 control={form.control}
-                name="category"
+                name="storePhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>업종</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="업종을 선택하세요" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {ADVERTISER_CATEGORY_LABELS[category]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>업장 전화번호</FormLabel>
+                    <FormControl>
+                      <Input
+                        inputMode="tel"
+                        placeholder="02-1234-5678"
+                        value={formatPhoneNumber(field.value ?? "")}
+                        onChange={(event) =>
+                          field.onChange(event.target.value.replace(/[^0-9]/g, ""))
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="businessRegistrationNumber"
+                name="representativeName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>사업자등록번호</FormLabel>
+                    <FormLabel>대표자명</FormLabel>
                     <FormControl>
-                      <Input
-                        inputMode="numeric"
-                        maxLength={12}
-                        placeholder="000-00-00000"
-                        value={formatBusinessNumber(field.value ?? "")}
-                        onChange={(event) => {
-                          const input = event.target.value;
-                          const digitsOnly = event.target.value
-                            .replace(/[^0-9]/g, "")
-                            .slice(0, 10);
-                          field.onChange(digitsOnly);
-                        }}
-                      />
+                      <Input placeholder="대표자 이름" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      숫자만 입력해 주세요. 저장 시 자동으로 검증합니다.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="businessRegistrationNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>사업자등록번호</FormLabel>
+                  <FormControl>
+                    <Input
+                      inputMode="numeric"
+                      maxLength={12}
+                      placeholder="000-00-00000"
+                      value={formatBusinessNumber(field.value ?? "")}
+                      onChange={(event) => {
+                        const digitsOnly = event.target.value
+                          .replace(/[^0-9]/g, "")
+                          .slice(0, 10);
+                        field.onChange(digitsOnly);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    숫자만 입력해 주세요. 저장 시 자동으로 검증합니다.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600 shadow-sm">

@@ -31,11 +31,8 @@ export const createSupabaseServerClient = async (): Promise<
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            if (typeof cookieStore.set === "function") {
-              cookieStore.set({ name, value, ...options });
-            }
-          });
+          // 쿠키 수정을 비활성화 - 서버 컴포넌트에서는 쿠키를 수정할 수 없음
+          // 미들웨어에서 세션 관리를 담당
         },
       },
     }
