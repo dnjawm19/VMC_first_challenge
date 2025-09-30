@@ -122,3 +122,39 @@ export const CampaignDetailResponseSchema = z.object({
 });
 
 export type CampaignDetailResponse = z.infer<typeof CampaignDetailResponseSchema>;
+
+const visitDateSchema = z
+  .string()
+  .regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)
+  .refine((value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return false;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    return date >= today;
+  }, '방문 예정일은 오늘 이후여야 합니다.');
+
+export const CampaignApplicationRequestSchema = z.object({
+  motivation: z
+    .string()
+    .min(10, '각오 한마디를 최소 10자 이상 입력해 주세요.')
+    .max(1000, '각오 한마디는 최대 1000자까지 입력할 수 있습니다.'),
+  visitPlanDate: visitDateSchema,
+});
+
+export type CampaignApplicationRequest = z.infer<
+  typeof CampaignApplicationRequestSchema
+>;
+
+export const CampaignApplicationResponseSchema = z.object({
+  applicationId: z.string().uuid(),
+  status: z.enum(['applied']),
+  submittedAt: z.string(),
+});
+
+export type CampaignApplicationResponse = z.infer<
+  typeof CampaignApplicationResponseSchema
+>;

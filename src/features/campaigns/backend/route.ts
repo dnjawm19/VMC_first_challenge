@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import {
   failure,
   respond,
+  success,
 } from '@/backend/http/response';
 import {
   getSupabase,
@@ -12,7 +13,7 @@ import {
   CampaignListQuerySchema,
   CampaignIdParamsSchema,
 } from '@/features/campaigns/backend/schema';
-import { getCampaigns, getCampaignDetail } from '@/features/campaigns/backend/service';
+import { getCampaigns, getCampaignDetail, applyToCampaign } from '@/features/campaigns/backend/service';
 import { campaignErrorCodes } from '@/features/campaigns/backend/error';
 
 const extractBearerToken = (authorizationHeader: string | undefined) => {
@@ -40,6 +41,31 @@ const resolveOptionalUserId = async (c: AppContext) => {
   const { data } = await supabase.auth.getUser(token);
 
   return data.user?.id;
+};
+
+const resolveRequiredUserId = async (c: AppContext) => {
+  const token = extractBearerToken(c.req.header('authorization'));
+
+  if (!token) {
+    return failure(
+      401,
+      campaignErrorCodes.validationError,
+      '로그인이 필요한 요청입니다.',
+    );
+  }
+
+  const supabase = getSupabase(c);
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data.user) {
+    return failure(
+      401,
+      campaignErrorCodes.validationError,
+      '유효하지 않은 인증 토큰입니다.',
+    );
+  }
+
+  return success({ userId: data.user.id });
 };
 
 export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
@@ -87,6 +113,56 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
       supabase,
       paramsResult.data.campaignId,
       currentUserId,
+    );
+
+    return respond(c, result);
+  });
+
+  app.post('/campaigns/:campaignId/applications', async (c) => {
+    const paramsResult = CampaignIdParamsSchema.safeParse({
+      campaignId: c.req.param('campaignId'),
+    });
+
+    if (!paramsResult.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '캠페인 ID 형식이 올바르지 않습니다.',
+          paramsResult.error.format(),
+        ),
+      );
+    }
+
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    let payload;
+
+    try {
+      payload = await c.req.json();
+    } catch (error) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '요청 본문을 해석할 수 없습니다.',
+          error instanceof Error ? error.message : String(error),
+        ),
+      );
+    }
+
+    const supabase = getSupabase(c);
+    const result = await applyToCampaign(
+      supabase,
+      paramsResult.data.campaignId,
+      authResult.data.userId,
+      payload,
     );
 
     return respond(c, result);

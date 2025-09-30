@@ -11,9 +11,13 @@ import {
 import {
   CampaignListResponseSchema,
   CampaignDetailResponseSchema,
+  CampaignApplicationRequestSchema,
+  CampaignApplicationResponseSchema,
   type CampaignListQuery,
   type CampaignListResponse,
   type CampaignDetailResponse,
+  type CampaignApplicationRequest,
+  type CampaignApplicationResponse,
 } from '@/features/campaigns/backend/schema';
 import { evaluateCampaignEligibility } from '@/features/campaigns/lib/eligibility';
 
@@ -233,4 +237,181 @@ export const getCampaignDetail = async (
   }
 
   return success(parsed.data);
+};
+
+export const applyToCampaign = async (
+  client: SupabaseClient,
+  campaignId: string,
+  userId: string,
+  payload: CampaignApplicationRequest,
+): Promise<
+  HandlerResult<CampaignApplicationResponse, CampaignErrorCode, unknown>
+> => {
+  const parsedPayload = CampaignApplicationRequestSchema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    return failure(
+      400,
+      campaignErrorCodes.validationError,
+      '체험단 지원 정보가 올바르지 않습니다.',
+      parsedPayload.error.format(),
+    );
+  }
+
+  const { data: campaign, error: campaignError } = await client
+    .from(CAMPAIGNS_TABLE)
+    .select('id, status, recruitment_end_at')
+    .eq('id', campaignId)
+    .maybeSingle();
+
+  if (campaignError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      campaignError.message,
+    );
+  }
+
+  if (!campaign) {
+    return failure(
+      404,
+      campaignErrorCodes.notFound,
+      '요청한 체험단을 찾을 수 없습니다.',
+    );
+  }
+
+  if (evaluateCampaignEligibility({
+    status: campaign.status ?? 'recruiting',
+    recruitmentEndAt: campaign.recruitment_end_at,
+    isLoggedIn: true,
+    userRole: 'influencer',
+    influencerProfileComplete: true,
+    alreadyApplied: false,
+  }).status === 'campaign_closed') {
+    return failure(
+      400,
+      campaignErrorCodes.detailFetchFailed,
+      '모집이 종료된 체험단에는 지원할 수 없습니다.',
+    );
+  }
+
+  const { data: userProfile, error: userProfileError } = await client
+    .from(USER_PROFILES_TABLE)
+    .select('role')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (userProfileError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      userProfileError.message,
+    );
+  }
+
+  if (!userProfile || userProfile.role !== 'influencer') {
+    return failure(
+      403,
+      campaignErrorCodes.validationError,
+      '인플루언서 계정만 지원할 수 있습니다.',
+    );
+  }
+
+  const [{ data: influencerProfile, error: influencerProfileError }, { data: channels, error: channelError }] = await Promise.all([
+    client
+      .from(INFLUENCER_PROFILES_TABLE)
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    client
+      .from(INFLUENCER_CHANNELS_TABLE)
+      .select('id')
+      .eq('influencer_user_id', userId),
+  ]);
+
+  if (influencerProfileError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      influencerProfileError.message,
+    );
+  }
+
+  if (channelError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      channelError.message,
+    );
+  }
+
+  const influencerProfileComplete = Boolean(influencerProfile) && (channels?.length ?? 0) > 0;
+
+  if (!influencerProfileComplete) {
+    return failure(
+      403,
+      campaignErrorCodes.validationError,
+      '인플루언서 프로필과 채널 정보를 먼저 등록해 주세요.',
+    );
+  }
+
+  const { data: existingApplication, error: existingApplicationError } = await client
+    .from(CAMPAIGN_APPLICATIONS_TABLE)
+    .select('id')
+    .eq('campaign_id', campaignId)
+    .eq('influencer_user_id', userId)
+    .maybeSingle();
+
+  if (existingApplicationError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      existingApplicationError.message,
+    );
+  }
+
+  if (existingApplication) {
+    return failure(
+      409,
+      campaignErrorCodes.validationError,
+      '이미 지원한 체험단입니다.',
+    );
+  }
+
+  const { data, error } = await client
+    .from(CAMPAIGN_APPLICATIONS_TABLE)
+    .insert({
+      campaign_id: campaignId,
+      influencer_user_id: userId,
+      motivation: parsedPayload.data.motivation,
+      visit_plan_date: parsedPayload.data.visitPlanDate,
+      status: 'applied',
+    })
+    .select('id, submitted_at')
+    .maybeSingle();
+
+  if (error || !data) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      error?.message ?? '지원 내역을 저장하지 못했습니다.',
+    );
+  }
+
+  const parsedResponse = CampaignApplicationResponseSchema.safeParse({
+    applicationId: data.id,
+    status: 'applied' as const,
+    submittedAt: data.submitted_at,
+  });
+
+  if (!parsedResponse.success) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      '지원 응답이 올바르지 않습니다.',
+      parsedResponse.error.format(),
+    );
+  }
+
+  return success(parsedResponse.data, 201);
 };
