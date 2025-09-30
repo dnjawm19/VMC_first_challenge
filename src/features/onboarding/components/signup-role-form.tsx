@@ -5,11 +5,24 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   DEFAULT_ONBOARDING_AUTH_METHOD,
@@ -22,20 +35,18 @@ import { useSignupMutation } from "@/features/onboarding/hooks/useSignupMutation
 
 const SignupBaseSchema = SignupRequestSchema.omit({ terms: true });
 
-const TermsAgreementSchema = z
-  .record(z.boolean())
-  .superRefine((value, ctx) => {
-    const missingRequired = ONBOARDING_TERMS.filter(
-      (term) => term.required && !value[term.code]
-    );
+const TermsAgreementSchema = z.record(z.boolean()).superRefine((value, ctx) => {
+  const missingRequired = ONBOARDING_TERMS.filter(
+    (term) => term.required && !value[term.code]
+  );
 
-    if (missingRequired.length > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "모든 필수 약관에 동의해 주세요.",
-      });
-    }
-  });
+  if (missingRequired.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "모든 필수 약관에 동의해 주세요.",
+    });
+  }
+});
 
 const SignupFormSchema = SignupBaseSchema.extend({
   confirmPassword: z.string().min(8, "비밀번호는 최소 8자 이상이어야 합니다."),
@@ -103,13 +114,15 @@ export const SignupRoleForm = () => {
           terms: agreedTerms,
         },
         {
-          onSuccess: () => {
+          onSuccess: (data) => {
+            const emailQuery = encodeURIComponent(data.email);
             toast({
               title: "회원가입 완료",
-              description: "확인 이메일을 발송했습니다. 이메일 인증 후 로그인해 주세요.",
+              description:
+                "확인 이메일을 발송했습니다. 이메일 인증 후 로그인해 주세요.",
             });
             form.reset(createDefaultFormValues());
-            router.push("/login");
+            router.push(`/signup/verify?email=${emailQuery}`);
           },
           onError: (error) => {
             toast({
@@ -165,7 +178,12 @@ export const SignupRoleForm = () => {
               <FormItem>
                 <FormLabel>이메일</FormLabel>
                 <FormControl>
-                  <Input type="email" autoComplete="email" placeholder="name@example.com" {...field} />
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -204,7 +222,12 @@ export const SignupRoleForm = () => {
               <FormItem>
                 <FormLabel>비밀번호</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="8자 이상 영문, 숫자" {...field} />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="8자 이상 영문, 숫자"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -217,7 +240,12 @@ export const SignupRoleForm = () => {
               <FormItem>
                 <FormLabel>비밀번호 확인</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="비밀번호를 다시 입력해 주세요" {...field} />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="비밀번호를 다시 입력해 주세요"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -261,7 +289,11 @@ export const SignupRoleForm = () => {
             )}
           />
         </div>
-        <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full md:w-auto"
+        >
           {isSubmitting ? "가입 처리 중" : "회원가입"}
         </Button>
       </form>
