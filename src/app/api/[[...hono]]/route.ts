@@ -1,5 +1,5 @@
-import { handle } from 'hono/vercel';
-import { createHonoApp } from '@/backend/hono/app';
+import { handle } from "hono/vercel";
+import { createHonoApp } from "@/backend/hono/app";
 
 const app = createHonoApp();
 
@@ -10,4 +10,4 @@ export const PATCH = handle(app);
 export const DELETE = handle(app);
 export const OPTIONS = handle(app);
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
