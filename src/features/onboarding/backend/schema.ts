@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  INFLUENCER_CHANNEL_TYPES,
   ONBOARDING_AUTH_METHODS,
   ONBOARDING_ROLES,
 } from '@/features/onboarding/constants';
@@ -47,3 +48,52 @@ export const SignupResponseSchema = z.object({
 });
 
 export type SignupResponse = z.infer<typeof SignupResponseSchema>;
+
+const isoDateSchema = z
+  .string()
+  .regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)
+  .refine((value) => {
+    const date = new Date(value);
+    return !Number.isNaN(date.getTime());
+  }, '유효한 날짜가 아닙니다.');
+
+export const InfluencerChannelInputSchema = z.object({
+  type: z.enum(INFLUENCER_CHANNEL_TYPES, {
+    errorMap: () => ({ message: '채널 유형을 선택해 주세요.' }),
+  }),
+  name: z.string().min(1, '채널명을 입력해 주세요.'),
+  url: z.string().min(1, '채널 URL을 입력해 주세요.'),
+});
+
+export const InfluencerProfileUpsertRequestSchema = z.object({
+  birthDate: isoDateSchema,
+  channels: z
+    .array(InfluencerChannelInputSchema)
+    .min(1, '최소 한 개 이상의 채널을 등록해 주세요.'),
+});
+
+export type InfluencerProfileUpsertRequest = z.infer<
+  typeof InfluencerProfileUpsertRequestSchema
+>;
+
+export const InfluencerChannelSchema = z.object({
+  id: z.number().int().positive(),
+  type: z.enum(INFLUENCER_CHANNEL_TYPES),
+  name: z.string(),
+  url: z.string().url(),
+  status: z.enum(['pending', 'verified', 'failed']),
+});
+
+export const InfluencerProfileSchema = z.object({
+  birthDate: isoDateSchema,
+  agePolicyStatus: z.enum(['pending', 'verified', 'rejected']),
+});
+
+export const InfluencerProfileResponseSchema = z.object({
+  profile: InfluencerProfileSchema.nullable(),
+  channels: z.array(InfluencerChannelSchema),
+});
+
+export type InfluencerProfileResponse = z.infer<
+  typeof InfluencerProfileResponseSchema
+>;

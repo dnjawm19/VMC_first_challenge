@@ -1,15 +1,65 @@
 import type { Hono } from "hono";
-import { failure, respond, type ErrorResult } from "@/backend/http/response";
-import { getLogger, getSupabase, type AppEnv } from "@/backend/hono/context";
+import { failure, respond, success, type ErrorResult } from "@/backend/http/response";
 import {
+  getLogger,
+  getSupabase,
+  type AppEnv,
+  type AppContext,
+} from "@/backend/hono/context";
+import {
+  InfluencerProfileUpsertRequestSchema,
   SignupRequestSchema,
+  type InfluencerProfileUpsertRequest,
   type SignupRequest,
 } from "@/features/onboarding/backend/schema";
-import { createSignup } from "@/features/onboarding/backend/service";
+import {
+  createSignup,
+  getInfluencerProfile,
+  upsertInfluencerProfile,
+} from "@/features/onboarding/backend/service";
 import {
   onboardingErrorCodes,
   type OnboardingErrorCode,
 } from "@/features/onboarding/backend/error";
+
+const extractAccessToken = (authorizationHeader: string | undefined) => {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const matches = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+
+  if (!matches) {
+    return null;
+  }
+
+  return matches[1]?.trim() ?? null;
+};
+
+const resolveCurrentUserId = async (c: AppContext) => {
+  const supabase = getSupabase(c);
+  const token = extractAccessToken(c.req.header("authorization"));
+
+  if (!token) {
+    return failure(
+      401,
+      onboardingErrorCodes.unauthorized,
+      "인증이 필요한 요청입니다."
+    );
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data.user) {
+    return failure(
+      401,
+      onboardingErrorCodes.unauthorized,
+      "유효하지 않은 인증 토큰입니다."
+    );
+  }
+
+  return success({ userId: data.user.id });
+};
 
 type RegisterOptions = {
   prefix?: string;
@@ -64,7 +114,77 @@ const registerSignupRoute = (app: Hono<AppEnv>, { prefix = "" }: RegisterOptions
   });
 };
 
+const registerInfluencerRoutes = (
+  app: Hono<AppEnv>,
+  { prefix = "" }: RegisterOptions
+) => {
+  const basePath = `${prefix}/onboarding/influencer`;
+
+  app.get(basePath, async (c) => {
+    const authResult = await resolveCurrentUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    const supabase = getSupabase(c);
+    const result = await getInfluencerProfile(supabase, authResult.data.userId);
+
+    return respond(c, result);
+  });
+
+  app.put(basePath, async (c) => {
+    const authResult = await resolveCurrentUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    let payload: InfluencerProfileUpsertRequest;
+
+    try {
+      const body = await c.req.json();
+      const parsed = InfluencerProfileUpsertRequestSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return respond(
+          c,
+          failure(
+            400,
+            onboardingErrorCodes.validationError,
+            "인플루언서 정보가 올바르지 않습니다.",
+            parsed.error.format()
+          )
+        );
+      }
+
+      payload = parsed.data;
+    } catch (error) {
+      return respond(
+        c,
+        failure(
+          400,
+          onboardingErrorCodes.validationError,
+          "요청 본문을 해석할 수 없습니다.",
+          error instanceof Error ? error.message : String(error)
+        )
+      );
+    }
+
+    const supabase = getSupabase(c);
+    const result = await upsertInfluencerProfile(
+      supabase,
+      authResult.data.userId,
+      payload
+    );
+
+    return respond(c, result);
+  });
+};
+
 export const registerOnboardingRoutes = (app: Hono<AppEnv>) => {
   registerSignupRoute(app, { prefix: "" });
   registerSignupRoute(app, { prefix: "/api" });
+  registerInfluencerRoutes(app, { prefix: "" });
+  registerInfluencerRoutes(app, { prefix: "/api" });
 };

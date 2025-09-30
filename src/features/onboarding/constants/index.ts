@@ -14,6 +14,23 @@ export type OnboardingAuthMethod = (typeof ONBOARDING_AUTH_METHODS)[number];
 export const DEFAULT_ONBOARDING_AUTH_METHOD: OnboardingAuthMethod =
   ONBOARDING_AUTH_METHODS[0];
 
+export const INFLUENCER_CHANNEL_TYPES = [
+  'naver',
+  'youtube',
+  'instagram',
+  'threads',
+] as const;
+
+export type InfluencerChannelType =
+  (typeof INFLUENCER_CHANNEL_TYPES)[number];
+
+export const INFLUENCER_CHANNEL_LABELS: Record<InfluencerChannelType, string> = {
+  naver: '네이버 블로그',
+  youtube: '유튜브',
+  instagram: '인스타그램',
+  threads: '쓰레드',
+} as const;
+
 export type TermsDefinition = {
   code: string;
   version: string;
