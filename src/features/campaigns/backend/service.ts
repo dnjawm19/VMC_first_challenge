@@ -13,11 +13,15 @@ import {
   CampaignDetailResponseSchema,
   CampaignApplicationRequestSchema,
   CampaignApplicationResponseSchema,
+  MyApplicationsQuerySchema,
+  MyApplicationsResponseSchema,
   type CampaignListQuery,
   type CampaignListResponse,
   type CampaignDetailResponse,
   type CampaignApplicationRequest,
   type CampaignApplicationResponse,
+  type MyApplicationsQuery,
+  type MyApplicationsResponse,
 } from '@/features/campaigns/backend/schema';
 import { evaluateCampaignEligibility } from '@/features/campaigns/lib/eligibility';
 
@@ -414,4 +418,62 @@ export const applyToCampaign = async (
   }
 
   return success(parsedResponse.data, 201);
+};
+
+export const getMyApplications = async (
+  client: SupabaseClient,
+  userId: string,
+  query: MyApplicationsQuery,
+): Promise<HandlerResult<MyApplicationsResponse, CampaignErrorCode, unknown>> => {
+  const { data, error } = await client
+    .from(CAMPAIGN_APPLICATIONS_TABLE)
+    .select(
+      'id, status, submitted_at, visit_plan_date, campaign:campaigns(id, title, thumbnail_url, recruitment_end_at, benefits, mission)',
+    )
+    .eq('influencer_user_id', userId)
+    .order('submitted_at', { ascending: false });
+
+  if (error) {
+    return failure(
+      500,
+      campaignErrorCodes.fetchFailed,
+      error.message,
+    );
+  }
+
+  const filtered = (data ?? []).filter((item) =>
+    query.status ? item.status === query.status : true,
+  );
+
+  const mapped = filtered
+    .filter((item) => item.campaign?.id)
+    .map((item) => ({
+      applicationId: item.id,
+      status: item.status ?? 'applied',
+      submittedAt: item.submitted_at,
+      visitPlanDate: item.visit_plan_date,
+      campaign: {
+        id: item.campaign!.id,
+        title: item.campaign!.title,
+        thumbnailUrl: item.campaign!.thumbnail_url ?? undefined,
+        recruitmentEndAt: item.campaign!.recruitment_end_at,
+        benefits: item.campaign!.benefits,
+        mission: item.campaign!.mission,
+      },
+    }));
+
+  const parsed = MyApplicationsResponseSchema.safeParse({
+    items: mapped,
+  });
+
+  if (!parsed.success) {
+    return failure(
+      500,
+      campaignErrorCodes.fetchFailed,
+      '지원 내역 응답이 올바르지 않습니다.',
+      parsed.error.format(),
+    );
+  }
+
+  return success(parsed.data);
 };

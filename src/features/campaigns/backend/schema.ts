@@ -158,3 +158,39 @@ export const CampaignApplicationResponseSchema = z.object({
 export type CampaignApplicationResponse = z.infer<
   typeof CampaignApplicationResponseSchema
 >;
+
+export const MyApplicationsQuerySchema = z.object({
+  status: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value && ['applied', 'selected', 'rejected'].includes(value)
+        ? (value as 'applied' | 'selected' | 'rejected')
+        : undefined,
+    ),
+});
+
+export type MyApplicationsQuery = z.infer<typeof MyApplicationsQuerySchema>;
+
+export const MyApplicationItemSchema = z.object({
+  applicationId: z.string().uuid(),
+  status: z.enum(['applied', 'selected', 'rejected']),
+  submittedAt: z.string(),
+  visitPlanDate: z.string(),
+  campaign: z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    thumbnailUrl: z.string().url().optional(),
+    recruitmentEndAt: z.string(),
+    benefits: z.string(),
+    mission: z.string(),
+  }),
+});
+
+export const MyApplicationsResponseSchema = z.object({
+  items: z.array(MyApplicationItemSchema),
+});
+
+export type MyApplicationsResponse = z.infer<
+  typeof MyApplicationsResponseSchema
+>;

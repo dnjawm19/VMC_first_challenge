@@ -12,8 +12,14 @@ import {
 import {
   CampaignListQuerySchema,
   CampaignIdParamsSchema,
+  MyApplicationsQuerySchema,
 } from '@/features/campaigns/backend/schema';
-import { getCampaigns, getCampaignDetail, applyToCampaign } from '@/features/campaigns/backend/service';
+import {
+  getCampaigns,
+  getCampaignDetail,
+  applyToCampaign,
+  getMyApplications,
+} from '@/features/campaigns/backend/service';
 import { campaignErrorCodes } from '@/features/campaigns/backend/error';
 
 const extractBearerToken = (authorizationHeader: string | undefined) => {
@@ -70,11 +76,11 @@ const resolveRequiredUserId = async (c: AppContext) => {
 
 export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
   app.get('/campaigns', async (c) => {
-  const parseResult = CampaignListQuerySchema.safeParse(c.req.query());
+    const parseResult = CampaignListQuerySchema.safeParse(c.req.query());
 
-  if (!parseResult.success) {
-    return respond(
-      c,
+    if (!parseResult.success) {
+      return respond(
+        c,
         failure(
           400,
           campaignErrorCodes.validationError,
@@ -84,10 +90,10 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
       );
     }
 
-  const supabase = getSupabase(c);
-  const result = await getCampaigns(supabase, parseResult.data);
+    const supabase = getSupabase(c);
+    const result = await getCampaigns(supabase, parseResult.data);
 
-  return respond(c, result);
+    return respond(c, result);
   });
 
   app.get('/campaigns/:campaignId', async (c) => {
@@ -163,6 +169,37 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
       paramsResult.data.campaignId,
       authResult.data.userId,
       payload,
+    );
+
+    return respond(c, result);
+  });
+
+  app.get('/me/applications', async (c) => {
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    const queryResult = MyApplicationsQuerySchema.safeParse(c.req.query());
+
+    if (!queryResult.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '지원 목록 필터 값이 올바르지 않습니다.',
+          queryResult.error.format(),
+        ),
+      );
+    }
+
+    const supabase = getSupabase(c);
+    const result = await getMyApplications(
+      supabase,
+      authResult.data.userId,
+      queryResult.data,
     );
 
     return respond(c, result);

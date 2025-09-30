@@ -21,3 +21,19 @@ export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatusFilter, string> = {
   closed: '모집종료',
   selected: '선정완료',
 };
+
+export const APPLICATION_STATUS_FILTERS = ['all', 'applied', 'selected', 'rejected'] as const;
+export type ApplicationStatusFilter = (typeof APPLICATION_STATUS_FILTERS)[number];
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatusFilter, string> = {
+  all: '전체',
+  applied: '신청완료',
+  selected: '선정',
+  rejected: '반려',
+};
+
+export const APPLICATION_STATUS_BADGE_VARIANTS: Record<Exclude<ApplicationStatusFilter, 'all'>, 'default' | 'secondary' | 'destructive'> = {
+  applied: 'secondary',
+  selected: 'default',
+  rejected: 'destructive',
+};
