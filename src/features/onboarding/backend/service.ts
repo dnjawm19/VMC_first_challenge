@@ -204,7 +204,7 @@ export const upsertInfluencerProfile = async (
       return failure(
         400,
         onboardingErrorCodes.influencerChannelInvalid,
-        normalized.reason
+        (normalized as { reason: string }).reason
       );
     }
 
@@ -274,23 +274,23 @@ export const upsertInfluencerProfile = async (
 
 export const getAdvertiserProfile = async (
   client: SupabaseClient,
-  userId: string,
+  userId: string
 ): Promise<
   HandlerResult<AdvertiserProfileResponse, OnboardingErrorCode, unknown>
 > => {
   const { data, error } = await client
     .from(ADVERTISER_PROFILES_TABLE)
     .select(
-      'company_name, location, category, business_registration_number, verification_status',
+      "company_name, location, category, business_registration_number, verification_status"
     )
-    .eq('user_id', userId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
     return failure(
       500,
       onboardingErrorCodes.advertiserProfileFetchFailed,
-      error.message,
+      error.message
     );
   }
 
@@ -301,7 +301,7 @@ export const getAdvertiserProfile = async (
           location: data.location,
           category: data.category,
           businessRegistrationNumber: data.business_registration_number,
-          verificationStatus: data.verification_status ?? 'pending',
+          verificationStatus: data.verification_status ?? "pending",
         }
       : null,
   });
@@ -312,7 +312,7 @@ export const getAdvertiserProfile = async (
 export const upsertAdvertiserProfile = async (
   client: SupabaseClient,
   userId: string,
-  payload: AdvertiserProfileUpsertRequest,
+  payload: AdvertiserProfileUpsertRequest
 ): Promise<
   HandlerResult<AdvertiserProfileResponse, OnboardingErrorCode, unknown>
 > => {
@@ -322,48 +322,44 @@ export const upsertAdvertiserProfile = async (
     return failure(
       400,
       onboardingErrorCodes.validationError,
-      '광고주 정보가 올바르지 않습니다.',
-      parsed.error.format(),
+      "광고주 정보가 올바르지 않습니다.",
+      parsed.error.format()
     );
   }
 
   const normalizedBusinessNumber = normalizeBusinessNumber(
-    parsed.data.businessRegistrationNumber,
+    parsed.data.businessRegistrationNumber
   );
 
   if (!isValidBusinessNumber(normalizedBusinessNumber)) {
     return failure(
       400,
       onboardingErrorCodes.advertiserBusinessNumberInvalid,
-      '유효한 사업자등록번호가 아닙니다.',
+      "유효한 사업자등록번호가 아닙니다."
     );
   }
 
-  const { error } = await client
-    .from(ADVERTISER_PROFILES_TABLE)
-    .upsert(
-      {
-        user_id: userId,
-        company_name: parsed.data.companyName,
-        location: parsed.data.location,
-        category: parsed.data.category,
-        business_registration_number: normalizedBusinessNumber,
-        verification_status: 'pending',
-      },
-      { onConflict: 'user_id' },
-    );
+  const { error } = await client.from(ADVERTISER_PROFILES_TABLE).upsert(
+    {
+      user_id: userId,
+      company_name: parsed.data.companyName,
+      location: parsed.data.location,
+      category: parsed.data.category,
+      business_registration_number: normalizedBusinessNumber,
+      verification_status: "pending",
+    },
+    { onConflict: "user_id" }
+  );
 
   if (error) {
-    const isDuplicate = error.code === '23505';
+    const isDuplicate = error.code === "23505";
 
     return failure(
       400,
       isDuplicate
         ? onboardingErrorCodes.advertiserBusinessNumberDuplicate
         : onboardingErrorCodes.advertiserProfileUpsertFailed,
-      isDuplicate
-        ? '이미 등록된 사업자등록번호입니다.'
-        : error.message,
+      isDuplicate ? "이미 등록된 사업자등록번호입니다." : error.message
     );
   }
 
