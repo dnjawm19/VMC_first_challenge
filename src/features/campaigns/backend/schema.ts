@@ -79,3 +79,46 @@ export const CampaignListResponseSchema = z.object({
 });
 
 export type CampaignListResponse = z.infer<typeof CampaignListResponseSchema>;
+
+export const CampaignIdParamsSchema = z.object({
+  campaignId: z.string().uuid(),
+});
+
+export const CampaignEligibilitySchema = z.object({
+  status: z.enum([
+    'can_apply',
+    'needs_login',
+    'not_influencer',
+    'profile_incomplete',
+    'already_applied',
+    'campaign_closed',
+  ]),
+  reason: z.string(),
+});
+
+export type CampaignEligibility = z.infer<typeof CampaignEligibilitySchema>;
+
+export const CampaignDetailSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string().optional().nullable(),
+  recruitmentStartAt: z.string(),
+  recruitmentEndAt: z.string(),
+  capacity: z.number().int().nonnegative(),
+  benefits: z.string(),
+  mission: z.string(),
+  storeInfo: z.string(),
+  status: z.enum(['recruiting', 'closed', 'selected']),
+  thumbnailUrl: z.string().url().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type CampaignDetail = z.infer<typeof CampaignDetailSchema>;
+
+export const CampaignDetailResponseSchema = z.object({
+  campaign: CampaignDetailSchema,
+  eligibility: CampaignEligibilitySchema,
+});
+
+export type CampaignDetailResponse = z.infer<typeof CampaignDetailResponseSchema>;

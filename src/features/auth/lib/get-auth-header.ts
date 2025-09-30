@@ -22,3 +22,17 @@ export const getAuthHeader = async (): Promise<AuthHeaderResult> => {
     Authorization: `Bearer ${accessToken}`,
   } satisfies AuthHeaderResult;
 };
+
+export const getOptionalAuthHeader = async (): Promise<AuthHeaderResult | undefined> => {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+
+  if (!accessToken) {
+    return undefined;
+  }
+
+  return {
+    Authorization: `Bearer ${accessToken}`,
+  } satisfies AuthHeaderResult;
+};
