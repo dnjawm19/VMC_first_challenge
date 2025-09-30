@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  ADVERTISER_CATEGORIES,
   INFLUENCER_CHANNEL_TYPES,
   ONBOARDING_AUTH_METHODS,
   ONBOARDING_ROLES,
@@ -96,4 +97,36 @@ export const InfluencerProfileResponseSchema = z.object({
 
 export type InfluencerProfileResponse = z.infer<
   typeof InfluencerProfileResponseSchema
+>;
+
+export const AdvertiserProfileUpsertRequestSchema = z.object({
+  companyName: z.string().min(1, '업체명을 입력해 주세요.'),
+  location: z.string().min(1, '매장 위치를 입력해 주세요.'),
+  category: z.enum(ADVERTISER_CATEGORIES, {
+    errorMap: () => ({ message: '업종을 선택해 주세요.' }),
+  }),
+  businessRegistrationNumber: z
+    .string()
+    .min(10, '사업자등록번호를 정확히 입력해 주세요.')
+    .max(20, '사업자등록번호가 너무 깁니다.'),
+});
+
+export type AdvertiserProfileUpsertRequest = z.infer<
+  typeof AdvertiserProfileUpsertRequestSchema
+>;
+
+export const AdvertiserProfileResponseSchema = z.object({
+  profile: z
+    .object({
+      companyName: z.string(),
+      location: z.string(),
+      category: z.enum(ADVERTISER_CATEGORIES),
+      businessRegistrationNumber: z.string(),
+      verificationStatus: z.enum(['pending', 'verified', 'rejected']),
+    })
+    .nullable(),
+});
+
+export type AdvertiserProfileResponse = z.infer<
+  typeof AdvertiserProfileResponseSchema
 >;

@@ -5,20 +5,29 @@ import {
   type OnboardingErrorCode,
 } from "@/features/onboarding/backend/error";
 import {
+  AdvertiserProfileResponseSchema,
+  AdvertiserProfileUpsertRequestSchema,
   InfluencerProfileResponseSchema,
   InfluencerProfileUpsertRequestSchema,
   SignupResponseSchema,
+  type AdvertiserProfileResponse,
+  type AdvertiserProfileUpsertRequest,
   type InfluencerProfileResponse,
   type InfluencerProfileUpsertRequest,
   type SignupRequest,
   type SignupResponse,
 } from "@/features/onboarding/backend/schema";
 import { validateAndNormalizeChannel } from "@/features/onboarding/lib/channel-validator";
+import {
+  isValidBusinessNumber,
+  normalizeBusinessNumber,
+} from "@/features/onboarding/lib/business-number-validator";
 
 const USER_PROFILES_TABLE = "user_profiles";
 const USER_TERMS_TABLE = "user_terms_acceptances";
 const INFLUENCER_PROFILES_TABLE = "influencer_profiles";
 const INFLUENCER_CHANNELS_TABLE = "influencer_channels";
+const ADVERTISER_PROFILES_TABLE = "advertiser_profiles";
 
 const rollBackAuthUser = async (client: SupabaseClient, userId: string) => {
   await client.auth.admin.deleteUser(userId);
@@ -195,7 +204,7 @@ export const upsertInfluencerProfile = async (
       return failure(
         400,
         onboardingErrorCodes.influencerChannelInvalid,
-        (normalized as { reason: string }).reason
+        normalized.reason
       );
     }
 
@@ -261,4 +270,102 @@ export const upsertInfluencerProfile = async (
   }
 
   return getInfluencerProfile(client, userId);
+};
+
+export const getAdvertiserProfile = async (
+  client: SupabaseClient,
+  userId: string,
+): Promise<
+  HandlerResult<AdvertiserProfileResponse, OnboardingErrorCode, unknown>
+> => {
+  const { data, error } = await client
+    .from(ADVERTISER_PROFILES_TABLE)
+    .select(
+      'company_name, location, category, business_registration_number, verification_status',
+    )
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    return failure(
+      500,
+      onboardingErrorCodes.advertiserProfileFetchFailed,
+      error.message,
+    );
+  }
+
+  const response = AdvertiserProfileResponseSchema.parse({
+    profile: data
+      ? {
+          companyName: data.company_name,
+          location: data.location,
+          category: data.category,
+          businessRegistrationNumber: data.business_registration_number,
+          verificationStatus: data.verification_status ?? 'pending',
+        }
+      : null,
+  });
+
+  return success(response);
+};
+
+export const upsertAdvertiserProfile = async (
+  client: SupabaseClient,
+  userId: string,
+  payload: AdvertiserProfileUpsertRequest,
+): Promise<
+  HandlerResult<AdvertiserProfileResponse, OnboardingErrorCode, unknown>
+> => {
+  const parsed = AdvertiserProfileUpsertRequestSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    return failure(
+      400,
+      onboardingErrorCodes.validationError,
+      '광고주 정보가 올바르지 않습니다.',
+      parsed.error.format(),
+    );
+  }
+
+  const normalizedBusinessNumber = normalizeBusinessNumber(
+    parsed.data.businessRegistrationNumber,
+  );
+
+  if (!isValidBusinessNumber(normalizedBusinessNumber)) {
+    return failure(
+      400,
+      onboardingErrorCodes.advertiserBusinessNumberInvalid,
+      '유효한 사업자등록번호가 아닙니다.',
+    );
+  }
+
+  const { error } = await client
+    .from(ADVERTISER_PROFILES_TABLE)
+    .upsert(
+      {
+        user_id: userId,
+        company_name: parsed.data.companyName,
+        location: parsed.data.location,
+        category: parsed.data.category,
+        business_registration_number: normalizedBusinessNumber,
+        verification_status: 'pending',
+      },
+      { onConflict: 'user_id' },
+    );
+
+  if (error) {
+    const isDuplicate = error.code === '23505';
+
+    return failure(
+      400,
+      isDuplicate
+        ? onboardingErrorCodes.advertiserBusinessNumberDuplicate
+        : onboardingErrorCodes.advertiserProfileUpsertFailed,
+      isDuplicate
+        ? '이미 등록된 사업자등록번호입니다.'
+        : error.message,
+    );
+  }
+
+  return getAdvertiserProfile(client, userId);
 };

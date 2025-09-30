@@ -31,6 +31,24 @@ export const INFLUENCER_CHANNEL_LABELS: Record<InfluencerChannelType, string> = 
   threads: '쓰레드',
 } as const;
 
+export const ADVERTISER_CATEGORIES = [
+  'restaurant',
+  'beauty',
+  'retail',
+  'service',
+  'other',
+] as const;
+
+export type AdvertiserCategory = (typeof ADVERTISER_CATEGORIES)[number];
+
+export const ADVERTISER_CATEGORY_LABELS: Record<AdvertiserCategory, string> = {
+  restaurant: '외식/식음료',
+  beauty: '뷰티/헬스',
+  retail: '리테일/쇼핑',
+  service: '서비스/체험',
+  other: '기타 업종',
+} as const;
+
 export type TermsDefinition = {
   code: string;
   version: string;

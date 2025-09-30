@@ -7,14 +7,18 @@ import {
   type AppContext,
 } from "@/backend/hono/context";
 import {
+  AdvertiserProfileUpsertRequestSchema,
   InfluencerProfileUpsertRequestSchema,
   SignupRequestSchema,
+  type AdvertiserProfileUpsertRequest,
   type InfluencerProfileUpsertRequest,
   type SignupRequest,
 } from "@/features/onboarding/backend/schema";
 import {
   createSignup,
+  getAdvertiserProfile,
   getInfluencerProfile,
+  upsertAdvertiserProfile,
   upsertInfluencerProfile,
 } from "@/features/onboarding/backend/service";
 import {
@@ -182,9 +186,82 @@ const registerInfluencerRoutes = (
   });
 };
 
+const registerAdvertiserRoutes = (
+  app: Hono<AppEnv>,
+  { prefix = "" }: RegisterOptions
+) => {
+  const basePath = `${prefix}/onboarding/advertiser`;
+
+  app.get(basePath, async (c) => {
+    const authResult = await resolveCurrentUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    const supabase = getSupabase(c);
+    const result = await getAdvertiserProfile(
+      supabase,
+      authResult.data.userId
+    );
+
+    return respond(c, result);
+  });
+
+  app.put(basePath, async (c) => {
+    const authResult = await resolveCurrentUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    let payload: AdvertiserProfileUpsertRequest;
+
+    try {
+      const body = await c.req.json();
+      const parsed = AdvertiserProfileUpsertRequestSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return respond(
+          c,
+          failure(
+            400,
+            onboardingErrorCodes.validationError,
+            "광고주 정보가 올바르지 않습니다.",
+            parsed.error.format()
+          )
+        );
+      }
+
+      payload = parsed.data;
+    } catch (error) {
+      return respond(
+        c,
+        failure(
+          400,
+          onboardingErrorCodes.validationError,
+          "요청 본문을 해석할 수 없습니다.",
+          error instanceof Error ? error.message : String(error)
+        )
+      );
+    }
+
+    const supabase = getSupabase(c);
+    const result = await upsertAdvertiserProfile(
+      supabase,
+      authResult.data.userId,
+      payload
+    );
+
+    return respond(c, result);
+  });
+};
+
 export const registerOnboardingRoutes = (app: Hono<AppEnv>) => {
   registerSignupRoute(app, { prefix: "" });
   registerSignupRoute(app, { prefix: "/api" });
   registerInfluencerRoutes(app, { prefix: "" });
   registerInfluencerRoutes(app, { prefix: "/api" });
+  registerAdvertiserRoutes(app, { prefix: "" });
+  registerAdvertiserRoutes(app, { prefix: "/api" });
 };

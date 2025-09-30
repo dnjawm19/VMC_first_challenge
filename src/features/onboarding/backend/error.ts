@@ -10,6 +10,10 @@ export const onboardingErrorCodes = {
   influencerProfileUpsertFailed: 'ONBOARDING_INFLUENCER_PROFILE_UPSERT_FAILED',
   influencerChannelSyncFailed: 'ONBOARDING_INFLUENCER_CHANNEL_SYNC_FAILED',
   influencerChannelInvalid: 'ONBOARDING_INFLUENCER_CHANNEL_INVALID',
+  advertiserProfileFetchFailed: 'ONBOARDING_ADVERTISER_PROFILE_FETCH_FAILED',
+  advertiserProfileUpsertFailed: 'ONBOARDING_ADVERTISER_PROFILE_UPSERT_FAILED',
+  advertiserBusinessNumberInvalid: 'ONBOARDING_ADVERTISER_BUSINESS_NUMBER_INVALID',
+  advertiserBusinessNumberDuplicate: 'ONBOARDING_ADVERTISER_BUSINESS_NUMBER_DUPLICATE',
 } as const;
 
 export type OnboardingErrorCode =
