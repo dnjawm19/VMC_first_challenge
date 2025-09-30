@@ -6,6 +6,11 @@
 - always use promise for page.tsx params props.
 - use valid picsum.photos stock image for placeholder image
 - route feature hooks' HTTP requests through `@/lib/remote/api-client`.
+- **NEVER use hardcoded values** - always use constants, environment variables, or configuration files
+- **Ensure zero type errors** - all TypeScript types must be properly defined and validated
+- **Ensure zero lint errors** - all code must pass ESLint validation without warnings or errors
+- **Ensure zero build errors** - all code must compile successfully without any build failures
+- **Validate all code changes** - run type checking, linting, and build before committing any changes
 
 ## Library
 
@@ -115,6 +120,16 @@ use following libraries for specific functionalities:
 8. Pure Functions
 9. Composition over inheritance
 
+## Quality Assurance:
+
+1. **Type Safety**: All variables, functions, and components must have proper TypeScript types
+2. **No Hardcoded Values**: Use constants from `src/constants/` or environment variables
+3. **Lint Compliance**: All code must pass ESLint without warnings or errors
+4. **Build Success**: All code must compile without TypeScript or build errors
+5. **Pre-commit Validation**: Run `npm run type-check`, `npm run lint`, and `npm run build` before any commit
+6. **Error Handling**: All async operations must have proper error handling
+7. **Input Validation**: All user inputs must be validated using Zod schemas
+
 ## Functional Programming:
 
 - Avoid Mutation
@@ -133,6 +148,15 @@ use following libraries for specific functionalities:
 - Minimize the use of AI generated comments, instead use clearly named variables and functions.
 - Always validate user inputs and handle errors gracefully.
 - Use the existing components and pages as a reference for the new components and pages.
+
+## Development Workflow:
+
+- **Before coding**: Check existing constants and environment variables
+- **During coding**: Use proper TypeScript types and avoid any hardcoded values
+- **After coding**: Run type checking, linting, and build validation
+- **Before commit**: Ensure all quality checks pass
+- **Constants management**: Add new constants to appropriate files in `src/constants/`
+- **Environment variables**: Use `src/constants/env.ts` for environment variable access
 
 ## Performance:
 
