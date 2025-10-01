@@ -53,15 +53,19 @@ export const getCampaigns = async (
   const offsetEnd = offsetStart + pageSize - 1;
   const { column, ascending } = mapSortToOrder(query.sort ?? 'latest');
 
-  const { data, error, count } = await client
+  const listQuery = client
     .from(CAMPAIGNS_TABLE)
     .select(
       'id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, thumbnail_url',
       { count: 'exact' },
     )
-    .eq('status', query.status ?? 'recruiting')
     .order(column, { ascending, nullsFirst: false })
     .range(offsetStart, offsetEnd);
+
+  const { data, error, count } =
+    query.status && query.status !== 'all'
+      ? await listQuery.eq('status', query.status)
+      : await listQuery;
 
   if (error) {
     return failure(500, campaignErrorCodes.fetchFailed, error.message);

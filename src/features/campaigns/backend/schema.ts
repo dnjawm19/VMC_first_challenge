@@ -47,7 +47,7 @@ export const CampaignListQuerySchema = z.object({
     .transform((value) =>
       value && CAMPAIGN_STATUS_FILTERS.includes(value as (typeof CAMPAIGN_STATUS_FILTERS)[number])
         ? (value as (typeof CAMPAIGN_STATUS_FILTERS)[number])
-        : 'recruiting',
+        : 'all',
     ),
 });
 

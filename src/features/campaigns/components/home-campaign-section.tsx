@@ -53,9 +53,9 @@ export const HomeCampaignSection = () => {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">모집 중인 체험단</h2>
+        <h2 className="text-2xl font-semibold">체험단 둘러보기</h2>
         <p className="text-sm text-slate-500">
-          지금 참여할 수 있는 체험단을 확인해 보세요. 마감 전에 지원하고 혜택을 받아보세요.
+          전체 체험단을 상태별로 필터링하며 원하는 캠페인을 찾아보세요.
         </p>
       </div>
       <CampaignFilterBar
