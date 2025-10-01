@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { MyApplicationsResponse } from "@/features/campaigns/backend/schema";
 import {
   APPLICATION_STATUS_BADGE_VARIANTS,
@@ -62,6 +63,13 @@ export const ApplicationList = ({ items }: ApplicationListProps) => {
               <p className="text-sm text-slate-600 line-clamp-2">혜택: {item.campaign.benefits}</p>
               <div className="mt-auto text-xs text-slate-500">
                 방문 예정일 {visitPlan}
+              </div>
+              <div className="flex justify-end">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/campaigns/${item.campaign.id}/apply`}>
+                    지원 내용 수정
+                  </Link>
+                </Button>
               </div>
             </div>
           </article>

@@ -16,7 +16,7 @@ import {
   CAMPAIGN_STATUS_LABELS,
 } from "@/features/campaign-management/constants";
 import { useAdvertiserCampaignsQuery } from "@/features/campaign-management/hooks/useAdvertiserCampaignsQuery";
-import { CampaignCreateDialog } from "@/features/campaign-management/components/campaign-create-dialog";
+import { match } from "ts-pattern";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -43,7 +43,7 @@ export const AdvertiserCampaignDashboard = () => {
 
   const { data, isLoading, error } = useAdvertiserCampaignsQuery(query);
   const campaignItems = data?.items ?? [];
-  const isVerified = data?.meta.verified ?? false;
+  const isVerified = data?.meta.verified ?? true;
 
   useEffect(() => {
     if (error) {
@@ -54,6 +54,22 @@ export const AdvertiserCampaignDashboard = () => {
       });
     }
   }, [error, toast]);
+
+  const renderCreateButton = (options?: { disabled?: boolean }) => {
+    const disabled = options?.disabled ?? !isVerified;
+
+    return match(disabled)
+      .with(true, () => (
+        <Button type="button" disabled>
+          신규 체험단 등록
+        </Button>
+      ))
+      .otherwise(() => (
+        <Button asChild>
+          <Link href="/advertiser/campaigns/new">신규 체험단 등록</Link>
+        </Button>
+      ));
+  };
 
   if (error) {
     const needsProfile = error.message.includes('광고주 정보 등록');
@@ -67,7 +83,7 @@ export const AdvertiserCampaignDashboard = () => {
               등록한 체험단을 확인하고 새로운 체험단을 생성할 수 있습니다.
             </p>
           </div>
-          <CampaignCreateDialog disabled />
+          {renderCreateButton({ disabled: true })}
         </header>
         <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-amber-500" />
@@ -135,15 +151,9 @@ export const AdvertiserCampaignDashboard = () => {
               ))}
             </SelectContent>
           </Select>
-          <CampaignCreateDialog disabled={!isVerified} />
+          {renderCreateButton()}
         </div>
       </header>
-
-      {!isVerified ? (
-        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-700">
-          사업자 정보 검증이 완료되지 않았습니다. 검증이 완료되기 전까지 새로운 체험단 등록이 제한될 수 있습니다.
-        </div>
-      ) : null}
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2">
@@ -163,7 +173,7 @@ export const AdvertiserCampaignDashboard = () => {
               신규 체험단을 등록하고 인플루언서를 모집해 보세요.
             </p>
           </div>
-          <CampaignCreateDialog disabled={!isVerified} />
+          {renderCreateButton()}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">

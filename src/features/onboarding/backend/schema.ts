@@ -18,35 +18,95 @@ const isoDateSchema = z
     return !Number.isNaN(date.getTime());
   }, '유효한 날짜가 아닙니다.');
 
-export const SignupRequestSchema = z.object({
-  fullName: z.string().min(1, '이름을 입력해 주세요.'),
-  phone: z
+export const AdvertiserProfileUpsertRequestSchema = z.object({
+  companyName: z.string().min(1, '업체명을 입력해 주세요.'),
+  address: z.string().min(1, '주소를 입력해 주세요.'),
+  storePhone: z
     .string()
-    .min(10, '휴대폰 번호를 정확히 입력해 주세요.')
-    .max(20, '휴대폰 번호가 너무 깁니다.'),
-  birthDate: isoDateSchema,
-  email: z.string().email('올바른 이메일 형식이 아닙니다.'),
-  password: z
+    .min(9, '업장 전화번호를 정확히 입력해 주세요.')
+    .max(20, '업장 전화번호가 너무 깁니다.'),
+  businessRegistrationNumber: z
     .string()
-    .min(8, '비밀번호는 최소 8자 이상이어야 합니다.'),
-  role: z.enum(ONBOARDING_ROLES, {
-    errorMap: () => ({ message: '역할을 선택해 주세요.' }),
-  }),
-  authMethod: z.enum(ONBOARDING_AUTH_METHODS),
-  terms: z
-    .array(SignupTermsSchema)
-    .min(1, '필수 약관에 동의해 주세요.')
-    .superRefine((terms, ctx) => {
-      const codes = new Set(terms.map((term) => term.code));
+    .min(10, '사업자등록번호를 정확히 입력해 주세요.')
+    .max(20, '사업자등록번호가 너무 깁니다.'),
+  representativeName: z.string().min(1, '대표자명을 입력해 주세요.'),
+});
 
-      if (codes.size !== terms.length) {
+export type AdvertiserProfileUpsertRequest = z.infer<
+  typeof AdvertiserProfileUpsertRequestSchema
+>;
+
+const InfluencerSignupChannelSchema = z.object({
+  type: z.enum(INFLUENCER_CHANNEL_TYPES, {
+    errorMap: () => ({ message: '채널 유형을 선택해 주세요.' }),
+  }),
+  name: z.string().min(1, '채널명을 입력해 주세요.'),
+  url: z.string().url('올바른 URL을 입력해 주세요.'),
+  followerCount: z
+    .number({ invalid_type_error: '팔로워 수는 숫자여야 합니다.' })
+    .int('팔로워 수는 정수여야 합니다.')
+    .min(0, '팔로워 수는 0 이상이어야 합니다.'),
+});
+
+const InfluencerSignupDetailsSchema = z.object({
+  channels: z
+    .array(InfluencerSignupChannelSchema)
+    .min(1, '최소 한 개 이상의 채널을 등록해 주세요.'),
+});
+
+export const SignupRequestSchema = z
+  .object({
+    fullName: z.string().min(1, '이름을 입력해 주세요.'),
+    phone: z
+      .string()
+      .min(10, '휴대폰 번호를 정확히 입력해 주세요.')
+      .max(20, '휴대폰 번호가 너무 깁니다.'),
+    birthDate: isoDateSchema,
+    email: z.string().email('올바른 이메일 형식이 아닙니다.'),
+    password: z
+      .string()
+      .min(8, '비밀번호는 최소 8자 이상이어야 합니다.'),
+    role: z.enum(ONBOARDING_ROLES, {
+      errorMap: () => ({ message: '역할을 선택해 주세요.' }),
+    }),
+    authMethod: z.enum(ONBOARDING_AUTH_METHODS),
+    terms: z
+      .array(SignupTermsSchema)
+      .min(1, '필수 약관에 동의해 주세요.')
+      .superRefine((terms, ctx) => {
+        const codes = new Set(terms.map((term) => term.code));
+
+        if (codes.size !== terms.length) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: '약관이 중복되어 있습니다.',
+          });
+        }
+      }),
+    influencerProfile: InfluencerSignupDetailsSchema.optional(),
+    advertiserProfile: AdvertiserProfileUpsertRequestSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.role === 'influencer') {
+      if (!value.influencerProfile) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: '약관이 중복되어 있습니다.',
+          path: ['influencerProfile'],
+          message: '인플루언서 채널 정보를 입력해 주세요.',
         });
       }
-    }),
-});
+    }
+
+    if (value.role === 'advertiser') {
+      if (!value.advertiserProfile) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['advertiserProfile'],
+          message: '광고주 정보를 입력해 주세요.',
+        });
+      }
+    }
+  });
 
 export type SignupRequest = z.infer<typeof SignupRequestSchema>;
 
@@ -102,24 +162,6 @@ export const InfluencerProfileResponseSchema = z.object({
 
 export type InfluencerProfileResponse = z.infer<
   typeof InfluencerProfileResponseSchema
->;
-
-export const AdvertiserProfileUpsertRequestSchema = z.object({
-  companyName: z.string().min(1, '업체명을 입력해 주세요.'),
-  address: z.string().min(1, '주소를 입력해 주세요.'),
-  storePhone: z
-    .string()
-    .min(9, '업장 전화번호를 정확히 입력해 주세요.')
-    .max(20, '업장 전화번호가 너무 깁니다.'),
-  businessRegistrationNumber: z
-    .string()
-    .min(10, '사업자등록번호를 정확히 입력해 주세요.')
-    .max(20, '사업자등록번호가 너무 깁니다.'),
-  representativeName: z.string().min(1, '대표자명을 입력해 주세요.'),
-});
-
-export type AdvertiserProfileUpsertRequest = z.infer<
-  typeof AdvertiserProfileUpsertRequestSchema
 >;
 
 export const AdvertiserProfileResponseSchema = z.object({

@@ -25,6 +25,7 @@ import {
 } from '@/features/campaign-management/backend/schema';
 import {
   ADVERTISER_CAMPAIGN_SORT_OPTIONS,
+  CAMPAIGN_STATUS_OPTIONS,
 } from '@/features/campaign-management/constants';
 
 const CAMPAIGNS_TABLE = 'campaigns';
@@ -53,7 +54,7 @@ const ensureVerifiedAdvertiser = async (
 ): Promise<HandlerResult<{ verified: boolean }, CampaignErrorCode>> => {
   const { data, error } = await client
     .from(ADVERTISER_PROFILES_TABLE)
-    .select('verification_status')
+    .select('user_id')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -73,9 +74,7 @@ const ensureVerifiedAdvertiser = async (
     );
   }
 
-  const verified = data.verification_status === 'verified';
-
-  return success({ verified });
+  return success({ verified: true });
 };
 
 const mapCampaignToDetail = (campaign: {
@@ -221,7 +220,8 @@ export const getAdvertiserCampaigns = async (
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    return advertiserResult;
+    const { status, error } = advertiserResult;
+    return failure(status, error.code, error.message, error.details);
   }
 
   const { column, ascending } = mapSortOption(query.sort ?? 'latest');
@@ -287,15 +287,8 @@ export const createCampaign = async (
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    return advertiserResult;
-  }
-
-  if (!advertiserResult.data.verified) {
-    return failure(
-      403,
-      campaignErrorCodes.validationError,
-      '사업자 검증 완료 후 체험단을 등록할 수 있습니다.',
-    );
+    const { status, error } = advertiserResult;
+    return failure(status, error.code, error.message, error.details);
   }
 
   const parsed = CampaignCreateRequestSchema.safeParse(payload);
@@ -360,7 +353,8 @@ export const getCampaignManagementDetail = async (
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    return advertiserResult;
+    const { status, error } = advertiserResult;
+    return failure(status, error.code, error.message, error.details);
   }
 
   return fetchCampaignManagementDetail(client, campaignId, userId);
@@ -375,7 +369,8 @@ export const handleCampaignAction = async (
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    return advertiserResult;
+    const { status, error } = advertiserResult;
+    return failure(status, error.code, error.message, error.details);
   }
 
   const payload = CampaignActionRequestSchema.safeParse(rawPayload);

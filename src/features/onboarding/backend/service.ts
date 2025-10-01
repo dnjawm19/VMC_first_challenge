@@ -33,6 +33,20 @@ const rollBackAuthUser = async (client: SupabaseClient, userId: string) => {
   await client.auth.admin.deleteUser(userId);
 };
 
+const cleanUpUserRecords = async (client: SupabaseClient, userId: string) => {
+  await Promise.all([
+    client.from(USER_TERMS_TABLE).delete().eq('user_id', userId),
+    client.from(ADVERTISER_PROFILES_TABLE).delete().eq('user_id', userId),
+    client
+      .from(INFLUENCER_CHANNELS_TABLE)
+      .delete()
+      .eq('influencer_user_id', userId),
+    client.from(INFLUENCER_PROFILES_TABLE).delete().eq('user_id', userId),
+  ]);
+
+  await client.from(USER_PROFILES_TABLE).delete().eq('user_id', userId);
+};
+
 export const createSignup = async (
   client: SupabaseClient,
   payload: SignupRequest
@@ -97,6 +111,7 @@ export const createSignup = async (
     );
 
     if (termsError) {
+      await cleanUpUserRecords(client, userId);
       await rollBackAuthUser(client, userId);
 
       return failure(
@@ -104,6 +119,59 @@ export const createSignup = async (
         onboardingErrorCodes.termsInsertFailed,
         termsError.message
       );
+    }
+  }
+
+  if (payload.role === 'influencer' && !payload.influencerProfile) {
+    await cleanUpUserRecords(client, userId);
+    await rollBackAuthUser(client, userId);
+
+    return failure(
+      400,
+      onboardingErrorCodes.validationError,
+      '인플루언서 채널 정보를 입력해 주세요.',
+    );
+  }
+
+  if (payload.role === 'influencer' && payload.influencerProfile) {
+    const influencerResult = await upsertInfluencerProfile(client, userId, {
+      birthDate: payload.birthDate,
+      channels: payload.influencerProfile.channels,
+    });
+
+    if (!influencerResult.ok) {
+      const { status, error } = influencerResult;
+      await cleanUpUserRecords(client, userId);
+      await rollBackAuthUser(client, userId);
+
+      return failure(status, error.code, error.message, error.details);
+    }
+  }
+
+  if (payload.role === 'advertiser' && !payload.advertiserProfile) {
+    await cleanUpUserRecords(client, userId);
+    await rollBackAuthUser(client, userId);
+
+    return failure(
+      400,
+      onboardingErrorCodes.validationError,
+      '광고주 정보를 입력해 주세요.',
+    );
+  }
+
+  if (payload.role === 'advertiser' && payload.advertiserProfile) {
+    const advertiserResult = await upsertAdvertiserProfile(
+      client,
+      userId,
+      payload.advertiserProfile
+    );
+
+    if (!advertiserResult.ok) {
+      const { status, error } = advertiserResult;
+      await cleanUpUserRecords(client, userId);
+      await rollBackAuthUser(client, userId);
+
+      return failure(status, error.code, error.message, error.details);
     }
   }
 
@@ -307,7 +375,7 @@ export const getAdvertiserProfile = async (
           storePhone: data.store_phone,
           representativeName: data.representative_name,
           businessRegistrationNumber: data.business_registration_number,
-          verificationStatus: data.verification_status ?? "pending",
+          verificationStatus: data.verification_status ?? "verified",
         }
       : null,
   });
@@ -354,7 +422,7 @@ export const upsertAdvertiserProfile = async (
       store_phone: normalizedStorePhone,
       representative_name: parsed.data.representativeName,
       business_registration_number: normalizedBusinessNumber,
-      verification_status: "pending",
+      verification_status: "verified",
     },
     { onConflict: "user_id" }
   );
