@@ -3,7 +3,8 @@ import "./globals.css";
 import Providers from "./providers";
 import { loadCurrentUser } from "@/features/auth/server/load-current-user";
 import { CurrentUserProvider } from "@/features/auth/context/current-user-context";
-import { AuthProvider } from '@/components/auth/auth-provider';
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { SiteHeader } from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,10 +20,25 @@ export default async function RootLayout({
 
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className="antialiased font-sans">
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
         <Providers>
           <CurrentUserProvider initialState={currentUser}>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <div className="flex min-h-screen flex-col">
+                <SiteHeader />
+                <main className="flex-1">
+                  <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6 md:py-12">
+                    {children}
+                  </div>
+                </main>
+                <footer className="border-t border-slate-200 bg-white py-6 text-sm text-slate-500">
+                  <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 md:px-6">
+                    <span>&copy; {new Date().getFullYear()} VMC Experience</span>
+                    <span>함께 만드는 체험단 플랫폼</span>
+                  </div>
+                </footer>
+              </div>
+            </AuthProvider>
           </CurrentUserProvider>
         </Providers>
       </body>
