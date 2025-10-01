@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, type FieldErrors } from "react-hook-form";
 import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import {
@@ -357,6 +357,29 @@ export const SignupRoleForm = () => {
     [form, router, signupMutation, termsList, toast]
   );
 
+  const onInvalid = useCallback(
+    (errors: FieldErrors<SignupFormValues>) => {
+      const termsError = errors.termsAgreement;
+
+      if (!termsError) {
+        return;
+      }
+
+      const message =
+        typeof termsError === "object" && termsError !== null && "message" in termsError &&
+        typeof (termsError as { message?: unknown }).message === "string"
+          ? (termsError as { message: string }).message
+          : "필수 약관에 동의해 주세요.";
+
+      toast({
+        title: "약관 동의 필요",
+        description: message,
+        variant: "destructive",
+      });
+    },
+    [toast]
+  );
+
   const influencerSection = match(role)
     .with("influencer", () => (
       <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -575,7 +598,7 @@ export const SignupRoleForm = () => {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, onInvalid)}
         className="flex flex-col gap-6"
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
