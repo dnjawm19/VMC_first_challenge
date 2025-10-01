@@ -88,6 +88,7 @@ const mapCampaignToDetail = (campaign: {
   mission: string;
   store_info: string;
   status: string | null;
+  thumbnail_url: string | null;
   created_at: string;
   updated_at: string;
 }) => ({
@@ -101,6 +102,7 @@ const mapCampaignToDetail = (campaign: {
   storeInfo: campaign.store_info,
   status: (campaign.status ??
     "recruiting") as (typeof CAMPAIGN_STATUS_OPTIONS)[number],
+  thumbnailUrl: campaign.thumbnail_url ?? undefined,
   createdAt: campaign.created_at,
   updatedAt: campaign.updated_at,
 });
@@ -115,7 +117,7 @@ const fetchCampaignManagementDetail = async (
   const { data: campaign, error: campaignError } = await client
     .from(CAMPAIGNS_TABLE)
     .select(
-      "id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, created_at, updated_at"
+      "id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, thumbnail_url, created_at, updated_at"
     )
     .eq("id", campaignId)
     .eq("advertiser_user_id", advertiserId)
@@ -442,7 +444,9 @@ export const deleteCampaign = async (
   client: SupabaseClient,
   userId: string,
   campaignId: string
-): Promise<HandlerResult<CampaignDeleteResponse, CampaignErrorCode, unknown>> => {
+): Promise<
+  HandlerResult<CampaignDeleteResponse, CampaignErrorCode, unknown>
+> => {
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
@@ -513,7 +517,9 @@ export const deleteCampaign = async (
     );
   }
 
-  const parsedResponse = CampaignDeleteResponseSchema.safeParse({ success: true });
+  const parsedResponse = CampaignDeleteResponseSchema.safeParse({
+    success: true,
+  });
 
   if (!parsedResponse.success) {
     return failure(

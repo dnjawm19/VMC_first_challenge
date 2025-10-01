@@ -134,6 +134,7 @@ export const CampaignManagementDetailSchema = z.object({
     mission: z.string(),
     storeInfo: z.string(),
     status: z.enum(CAMPAIGN_STATUS_OPTIONS),
+    thumbnailUrl: z.string().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
   }),

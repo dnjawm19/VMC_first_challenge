@@ -71,7 +71,10 @@ const formatPhoneNumber = (value: string) => {
       return `${digits.slice(0, 2)}-${digits.slice(2)}`;
     }
 
-    return `${digits.slice(0, 2)}-${digits.slice(2, digits.length - 4)}-${digits.slice(-4)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(
+      2,
+      digits.length - 4
+    )}-${digits.slice(-4)}`;
   }
 
   if (digits.length <= 3) {
@@ -82,7 +85,10 @@ const formatPhoneNumber = (value: string) => {
     return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   }
 
-  return `${digits.slice(0, 3)}-${digits.slice(3, digits.length - 4)}-${digits.slice(-4)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(
+    3,
+    digits.length - 4
+  )}-${digits.slice(-4)}`;
 };
 
 const formatBusinessNumber = (value: string) => {
@@ -325,20 +331,23 @@ export const SignupRoleForm = () => {
           advertiserProfile,
         };
 
-        console.info('[signup] submitting payload', payload);
+        console.info("[signup] submitting payload", payload);
 
         const response = await signupMutation.mutateAsync(payload);
 
         const emailQuery = encodeURIComponent(response.email);
         toast({
           title: "회원가입 완료",
-          description: "확인 이메일을 발송했습니다. 이메일 인증 후 로그인해 주세요.",
+          description:
+            "확인 이메일을 발송했습니다. 이메일 인증 후 로그인해 주세요.",
         });
         form.reset(createDefaultFormValues());
         router.push(`/signup/verify?email=${emailQuery}`);
       } catch (error) {
         const message =
-          typeof error === "object" && error !== null && "message" in error &&
+          typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
           typeof (error as { message?: unknown }).message === "string"
             ? (error as { message: string }).message
             : "회원가입에 실패했습니다.";
@@ -366,9 +375,12 @@ export const SignupRoleForm = () => {
       }
 
       const message =
-        typeof termsError === "object" && termsError !== null && "message" in termsError &&
-        typeof (termsError as { message?: unknown }).message === "string"
-          ? (termsError as { message: string }).message
+        typeof termsError === "object" &&
+        termsError !== null &&
+        "message" in termsError &&
+        typeof (termsError as unknown as { message?: unknown }).message ===
+          "string"
+          ? (termsError as unknown as { message: string }).message
           : "필수 약관에 동의해 주세요.";
 
       toast({
@@ -385,7 +397,9 @@ export const SignupRoleForm = () => {
       <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">SNS 채널 정보</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              SNS 채널 정보
+            </h2>
             <p className="text-sm text-slate-500">
               체험단 매칭을 위해 운영 중인 채널을 등록해 주세요.
             </p>
@@ -414,7 +428,10 @@ export const SignupRoleForm = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>채널 유형</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="채널 선택" />
@@ -439,7 +456,10 @@ export const SignupRoleForm = () => {
                     <FormItem>
                       <FormLabel>채널명</FormLabel>
                       <FormControl>
-                        <Input placeholder="채널명을 입력해 주세요." {...field} />
+                        <Input
+                          placeholder="채널명을 입력해 주세요."
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -460,27 +480,29 @@ export const SignupRoleForm = () => {
                     </FormItem>
                   )}
                 />
-                    <FormField
-                      control={form.control}
-                      name={`influencerChannels.${index}.followerCount`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>팔로워 수</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={field.value ?? ""}
-                              onChange={(event) => {
-                                const inputValue = event.target.value;
-                                field.onChange(inputValue === "" ? undefined : Number(inputValue));
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <FormField
+                  control={form.control}
+                  name={`influencerChannels.${index}.followerCount`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>팔로워 수</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={field.value ?? ""}
+                          onChange={(event) => {
+                            const inputValue = event.target.value;
+                            field.onChange(
+                              inputValue === "" ? undefined : Number(inputValue)
+                            );
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               <div className="flex justify-end">
                 <Button
@@ -635,11 +657,18 @@ export const SignupRoleForm = () => {
                         }
 
                         if (digits.length <= 5) {
-                          field.onChange(`${digits.slice(0, 2)}-${digits.slice(2)}`);
+                          field.onChange(
+                            `${digits.slice(0, 2)}-${digits.slice(2)}`
+                          );
                           return;
                         }
 
-                        field.onChange(`${digits.slice(0, 2)}-${digits.slice(2, digits.length - 4)}-${digits.slice(-4)}`);
+                        field.onChange(
+                          `${digits.slice(0, 2)}-${digits.slice(
+                            2,
+                            digits.length - 4
+                          )}-${digits.slice(-4)}`
+                        );
                         return;
                       }
 
@@ -649,11 +678,18 @@ export const SignupRoleForm = () => {
                       }
 
                       if (digits.length <= 7) {
-                        field.onChange(`${digits.slice(0, 3)}-${digits.slice(3)}`);
+                        field.onChange(
+                          `${digits.slice(0, 3)}-${digits.slice(3)}`
+                        );
                         return;
                       }
 
-                      field.onChange(`${digits.slice(0, 3)}-${digits.slice(3, digits.length - 4)}-${digits.slice(-4)}`);
+                      field.onChange(
+                        `${digits.slice(0, 3)}-${digits.slice(
+                          3,
+                          digits.length - 4
+                        )}-${digits.slice(-4)}`
+                      );
                     }}
                   />
                 </FormControl>
@@ -727,7 +763,11 @@ export const SignupRoleForm = () => {
               <FormItem>
                 <FormLabel>비밀번호</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -740,7 +780,11 @@ export const SignupRoleForm = () => {
               <FormItem>
                 <FormLabel>비밀번호 확인</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -767,7 +811,10 @@ export const SignupRoleForm = () => {
                       />
                     </FormControl>
                     <div className="space-y-1">
-                      <FormLabel htmlFor={`terms-${term.code}`} className="font-medium">
+                      <FormLabel
+                        htmlFor={`terms-${term.code}`}
+                        className="font-medium"
+                      >
                         {term.title}
                       </FormLabel>
                     </div>
@@ -780,7 +827,11 @@ export const SignupRoleForm = () => {
             <p className="text-sm text-rose-600">필수 약관에 동의해 주세요.</p>
           ) : null}
         </div>
-        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full sm:w-auto"
+        >
           {isSubmitting ? "회원가입 처리 중..." : "회원가입"}
         </Button>
       </form>
