@@ -98,6 +98,9 @@ export const CampaignCreateRequestSchema = z
 
 export type CampaignCreateRequest = z.infer<typeof CampaignCreateRequestSchema>;
 
+export const CampaignUpdateRequestSchema = CampaignCreateRequestSchema;
+export type CampaignUpdateRequest = CampaignCreateRequest;
+
 export const CampaignCreateResponseSchema = z.object({
   campaignId: z.string().uuid(),
 });
@@ -173,4 +176,12 @@ export const CampaignActionResponseSchema =
 
 export type CampaignActionResponse = z.infer<
   typeof CampaignActionResponseSchema
+>;
+
+export const CampaignDeleteResponseSchema = z.object({
+  success: z.literal(true),
+});
+
+export type CampaignDeleteResponse = z.infer<
+  typeof CampaignDeleteResponseSchema
 >;

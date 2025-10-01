@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 import { format } from "date-fns";
 import { AlertTriangle } from "lucide-react";
@@ -94,6 +95,9 @@ export const CampaignManagementDetail = ({ campaignId }: CampaignManagementDetai
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button asChild variant="outline">
+              <Link href={`/advertiser/campaigns/${campaignId}/edit`}>체험단 정보 수정</Link>
+            </Button>
             <Button
               type="button"
               variant="outline"

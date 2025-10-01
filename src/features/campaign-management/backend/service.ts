@@ -11,18 +11,22 @@ import {
 } from "@/features/campaigns/backend/error";
 import {
   AdvertiserCampaignListResponseSchema,
-  CampaignCreateRequestSchema,
-  CampaignCreateResponseSchema,
-  CampaignManagementDetailResponseSchema,
   CampaignActionRequestSchema,
   CampaignActionResponseSchema,
+  CampaignCreateRequestSchema,
+  CampaignCreateResponseSchema,
+  CampaignDeleteResponseSchema,
+  CampaignManagementDetailResponseSchema,
+  CampaignUpdateRequestSchema,
   type AdvertiserCampaignListResponse,
   type AdvertiserCampaignQuery,
-  type CampaignCreateRequest,
-  type CampaignCreateResponse,
-  type CampaignManagementDetailResponse,
   type CampaignActionRequest,
   type CampaignActionResponse,
+  type CampaignCreateRequest,
+  type CampaignCreateResponse,
+  type CampaignDeleteResponse,
+  type CampaignManagementDetailResponse,
+  type CampaignUpdateRequest,
 } from "@/features/campaign-management/backend/schema";
 import {
   ADVERTISER_CAMPAIGN_SORT_OPTIONS,
@@ -352,6 +356,175 @@ export const createCampaign = async (
   }
 
   return success(parsedResponse.data, 201);
+};
+
+export const updateCampaign = async (
+  client: SupabaseClient,
+  userId: string,
+  campaignId: string,
+  payload: CampaignUpdateRequest
+): Promise<
+  HandlerResult<CampaignManagementDetailResponse, CampaignErrorCode, unknown>
+> => {
+  const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
+
+  if (!advertiserResult.ok) {
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
+  }
+
+  const parsed = CampaignUpdateRequestSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    return failure(
+      400,
+      campaignErrorCodes.validationError,
+      "체험단 정보가 올바르지 않습니다.",
+      parsed.error.format()
+    );
+  }
+
+  const { data: existing, error: findError } = await client
+    .from(CAMPAIGNS_TABLE)
+    .select("id")
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", userId)
+    .maybeSingle();
+
+  if (findError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      findError.message
+    );
+  }
+
+  if (!existing) {
+    return failure(
+      404,
+      campaignErrorCodes.notFound,
+      "요청한 체험단을 찾을 수 없습니다."
+    );
+  }
+
+  const { error: updateError } = await client
+    .from(CAMPAIGNS_TABLE)
+    .update({
+      title: parsed.data.title,
+      recruitment_start_at: parsed.data.recruitmentStartAt,
+      recruitment_end_at: parsed.data.recruitmentEndAt,
+      capacity: parsed.data.capacity,
+      benefits: parsed.data.benefits,
+      mission: parsed.data.mission,
+      store_info: parsed.data.storeInfo,
+      thumbnail_url: parsed.data.thumbnailUrl ?? null,
+    })
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", userId);
+
+  if (updateError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      updateError.message
+    );
+  }
+
+  return fetchCampaignManagementDetail(client, campaignId, userId);
+};
+
+export const deleteCampaign = async (
+  client: SupabaseClient,
+  userId: string,
+  campaignId: string
+): Promise<HandlerResult<CampaignDeleteResponse, CampaignErrorCode, unknown>> => {
+  const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
+
+  if (!advertiserResult.ok) {
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
+  }
+
+  const { data: existingCampaign, error: findError } = await client
+    .from(CAMPAIGNS_TABLE)
+    .select("id")
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", userId)
+    .maybeSingle();
+
+  if (findError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      findError.message
+    );
+  }
+
+  if (!existingCampaign) {
+    return failure(
+      404,
+      campaignErrorCodes.notFound,
+      "요청한 체험단을 찾을 수 없습니다."
+    );
+  }
+
+  const { count: applicationCount, error: applicationError } = await client
+    .from(CAMPAIGN_APPLICATIONS_TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+
+  if (applicationError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      applicationError.message
+    );
+  }
+
+  if ((applicationCount ?? 0) > 0) {
+    return failure(
+      400,
+      campaignErrorCodes.validationError,
+      "지원자가 있는 체험단은 삭제할 수 없습니다."
+    );
+  }
+
+  const { error: deleteError } = await client
+    .from(CAMPAIGNS_TABLE)
+    .delete()
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", userId);
+
+  if (deleteError) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      deleteError.message
+    );
+  }
+
+  const parsedResponse = CampaignDeleteResponseSchema.safeParse({ success: true });
+
+  if (!parsedResponse.success) {
+    return failure(
+      500,
+      campaignErrorCodes.detailFetchFailed,
+      "체험단 삭제 응답이 올바르지 않습니다.",
+      parsedResponse.error.format()
+    );
+  }
+
+  return success(parsedResponse.data);
 };
 
 export const getCampaignManagementDetail = async (

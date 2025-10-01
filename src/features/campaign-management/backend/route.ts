@@ -13,12 +13,15 @@ import {
   AdvertiserCampaignQuerySchema,
   CampaignCreateRequestSchema,
   CampaignActionRequestSchema,
+  CampaignUpdateRequestSchema,
 } from '@/features/campaign-management/backend/schema';
 import {
   getAdvertiserCampaigns,
   createCampaign,
   getCampaignManagementDetail,
   handleCampaignAction,
+  updateCampaign,
+  deleteCampaign,
 } from '@/features/campaign-management/backend/service';
 import { campaignErrorCodes } from '@/features/campaigns/backend/error';
 
@@ -162,6 +165,73 @@ const registerCampaignManagementRoutesWithPrefix = (
 
     const supabase = getSupabase(c);
     const result = await getCampaignManagementDetail(
+      supabase,
+      authResult.data.userId,
+      campaignId,
+    );
+
+    return respond(c, result);
+  });
+
+  app.patch(campaignDetailPath, async (c) => {
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await c.req.json();
+    } catch (error) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '요청 본문을 해석할 수 없습니다.',
+          error instanceof Error ? error.message : String(error),
+        ),
+      );
+    }
+
+    const parsed = CampaignUpdateRequestSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          campaignErrorCodes.validationError,
+          '체험단 정보가 올바르지 않습니다.',
+          parsed.error.format(),
+        ),
+      );
+    }
+
+    const campaignId = c.req.param('campaignId');
+    const supabase = getSupabase(c);
+    const result = await updateCampaign(
+      supabase,
+      authResult.data.userId,
+      campaignId,
+      parsed.data,
+    );
+
+    return respond(c, result);
+  });
+
+  app.delete(campaignDetailPath, async (c) => {
+    const authResult = await resolveRequiredUserId(c);
+
+    if (!authResult.ok) {
+      return respond(c, authResult);
+    }
+
+    const campaignId = c.req.param('campaignId');
+    const supabase = getSupabase(c);
+    const result = await deleteCampaign(
       supabase,
       authResult.data.userId,
       campaignId,
