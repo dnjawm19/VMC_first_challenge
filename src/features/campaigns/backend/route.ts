@@ -74,8 +74,20 @@ const resolveRequiredUserId = async (c: AppContext) => {
   return success({ userId: data.user.id });
 };
 
-export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
-  app.get('/campaigns', async (c) => {
+type RegisterOptions = {
+  prefix?: string;
+};
+
+const registerCampaignRoutesWithPrefix = (
+  app: Hono<AppEnv>,
+  { prefix = '' }: RegisterOptions,
+) => {
+  const campaignsPath = `${prefix}/campaigns`;
+  const campaignDetailPath = `${campaignsPath}/:campaignId`;
+  const campaignApplicationPath = `${campaignDetailPath}/applications`;
+  const myApplicationsPath = `${prefix}/me/applications`;
+
+  app.get(campaignsPath, async (c) => {
     const parseResult = CampaignListQuerySchema.safeParse(c.req.query());
 
     if (!parseResult.success) {
@@ -96,7 +108,7 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.get('/campaigns/:campaignId', async (c) => {
+  app.get(campaignDetailPath, async (c) => {
     const paramsResult = CampaignIdParamsSchema.safeParse({
       campaignId: c.req.param('campaignId'),
     });
@@ -124,7 +136,7 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.post('/campaigns/:campaignId/applications', async (c) => {
+  app.post(campaignApplicationPath, async (c) => {
     const paramsResult = CampaignIdParamsSchema.safeParse({
       campaignId: c.req.param('campaignId'),
     });
@@ -174,7 +186,7 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.get('/me/applications', async (c) => {
+  app.get(myApplicationsPath, async (c) => {
     const authResult = await resolveRequiredUserId(c);
 
     if (!authResult.ok) {
@@ -204,4 +216,10 @@ export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
 
     return respond(c, result);
   });
+};
+
+export const registerCampaignRoutes = (app: Hono<AppEnv>) => {
+  ['' as const, '/api' as const].forEach((prefix) =>
+    registerCampaignRoutesWithPrefix(app, { prefix }),
+  );
 };

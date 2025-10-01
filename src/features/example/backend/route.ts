@@ -16,8 +16,17 @@ import {
   type ExampleServiceError,
 } from './error';
 
-export const registerExampleRoutes = (app: Hono<AppEnv>) => {
-  app.get('/example/:id', async (c) => {
+type RegisterOptions = {
+  prefix?: string;
+};
+
+const registerExampleRoutesWithPrefix = (
+  app: Hono<AppEnv>,
+  { prefix = '' }: RegisterOptions,
+) => {
+  const examplePath = `${prefix}/example/:id`;
+
+  app.get(examplePath, async (c) => {
     const parsedParams = ExampleParamsSchema.safeParse({ id: c.req.param('id') });
 
     if (!parsedParams.success) {
@@ -49,4 +58,10 @@ export const registerExampleRoutes = (app: Hono<AppEnv>) => {
 
     return respond(c, result);
   });
+};
+
+export const registerExampleRoutes = (app: Hono<AppEnv>) => {
+  ['' as const, '/api' as const].forEach((prefix) =>
+    registerExampleRoutesWithPrefix(app, { prefix }),
+  );
 };

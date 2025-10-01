@@ -61,8 +61,19 @@ const resolveRequiredUserId = async (c: AppContext) => {
   return success({ userId: data.user.id });
 };
 
-export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
-  app.get('/advertiser/campaigns', async (c) => {
+type RegisterOptions = {
+  prefix?: string;
+};
+
+const registerCampaignManagementRoutesWithPrefix = (
+  app: Hono<AppEnv>,
+  { prefix = '' }: RegisterOptions,
+) => {
+  const campaignsPath = `${prefix}/advertiser/campaigns`;
+  const campaignDetailPath = `${campaignsPath}/:campaignId`;
+  const campaignActionPath = `${campaignDetailPath}/actions`;
+
+  app.get(campaignsPath, async (c) => {
     const authResult = await resolveRequiredUserId(c);
 
     if (!authResult.ok) {
@@ -93,7 +104,7 @@ export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.post('/advertiser/campaigns', async (c) => {
+  app.post(campaignsPath, async (c) => {
     const authResult = await resolveRequiredUserId(c);
 
     if (!authResult.ok) {
@@ -140,7 +151,7 @@ export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.get('/advertiser/campaigns/:campaignId', async (c) => {
+  app.get(campaignDetailPath, async (c) => {
     const authResult = await resolveRequiredUserId(c);
 
     if (!authResult.ok) {
@@ -159,7 +170,7 @@ export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
     return respond(c, result);
   });
 
-  app.post('/advertiser/campaigns/:campaignId/actions', async (c) => {
+  app.post(campaignActionPath, async (c) => {
     const authResult = await resolveRequiredUserId(c);
 
     if (!authResult.ok) {
@@ -207,4 +218,10 @@ export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
 
     return respond(c, result);
   });
+};
+
+export const registerCampaignManagementRoutes = (app: Hono<AppEnv>) => {
+  ['' as const, '/api' as const].forEach((prefix) =>
+    registerCampaignManagementRoutesWithPrefix(app, { prefix }),
+  );
 };
