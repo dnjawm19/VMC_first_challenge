@@ -444,7 +444,7 @@ export const handleCampaignAction = async (
 
   const { data: applicants, error: applicantsError } = await client
     .from(CAMPAIGN_APPLICATIONS_TABLE)
-    .select('id')
+    .select('id, status')
     .eq('campaign_id', campaignId);
 
   if (applicantsError) {
@@ -455,9 +455,8 @@ export const handleCampaignAction = async (
     );
   }
 
-  const validApplicantIds = new Set(
-    (applicants ?? []).map((applicant) => applicant.id),
-  );
+  const applicantRows = applicants ?? [];
+  const validApplicantIds = new Set(applicantRows.map((applicant) => applicant.id));
 
   const selectedIds = parsedPayload.applicantIds.filter((id) =>
     validApplicantIds.has(id),
@@ -492,27 +491,26 @@ export const handleCampaignAction = async (
     );
   }
 
-  let rejectError = null;
+  const rejectIds = applicantRows
+    .filter(
+      (applicant) =>
+        applicant.status === 'applied' && !selectedIds.includes(applicant.id),
+    )
+    .map((applicant) => applicant.id);
 
-  if (selectedIds.length > 0) {
-    const notInClause = `(${selectedIds
-      .map((id) => `'${id}'`)
-      .join(',')})`;
-    const { error } = await client
+  if (rejectIds.length > 0) {
+    const { error: rejectError } = await client
       .from(CAMPAIGN_APPLICATIONS_TABLE)
       .update({ status: 'rejected' })
-      .eq('campaign_id', campaignId)
-      .not('id', 'in', notInClause);
+      .in('id', rejectIds);
 
-    rejectError = error;
-  }
-
-  if (rejectError) {
-    return failure(
-      500,
-      campaignErrorCodes.detailFetchFailed,
-      rejectError.message,
-    );
+    if (rejectError) {
+      return failure(
+        500,
+        campaignErrorCodes.detailFetchFailed,
+        rejectError.message,
+      );
+    }
   }
 
   const { error: statusUpdateError } = await client
