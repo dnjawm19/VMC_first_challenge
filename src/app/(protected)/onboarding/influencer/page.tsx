@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Brain } from "lucide-react";
 import { InfluencerProfileForm } from "@/features/onboarding/components/influencer-profile-form";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 
 type PageProps = {
   params: Promise<Record<string, string>>;
@@ -21,18 +22,18 @@ export default function InfluencerOnboardingPage({ params }: PageProps) {
       return;
     }
 
-    const role = user?.appMetadata?.role;
+    const role = getUserRole(user);
 
     if (role && role !== "influencer") {
       router.replace("/");
     }
-  }, [isAuthenticated, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, router, user]);
 
   if (!isAuthenticated) {
     return null;
   }
 
-  const role = user?.appMetadata?.role;
+  const role = getUserRole(user);
 
   if (role && role !== "influencer") {
     return (

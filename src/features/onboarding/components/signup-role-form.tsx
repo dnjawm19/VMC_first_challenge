@@ -198,13 +198,7 @@ const createDefaultFormValues = (): SignupFormValues => ({
     {}
   ),
   influencerChannels: [],
-  advertiserProfile: {
-    companyName: "",
-    address: "",
-    storePhone: "",
-    businessRegistrationNumber: "",
-    representativeName: "",
-  },
+  advertiserProfile: undefined,
 });
 
 export const SignupRoleForm = () => {
@@ -224,6 +218,16 @@ export const SignupRoleForm = () => {
 
   const termsList = useMemo(() => ONBOARDING_TERMS, []);
   const role = form.watch("role");
+  const advertiserDefaults = useMemo(
+    () => ({
+      companyName: "",
+      address: "",
+      storePhone: "",
+      businessRegistrationNumber: "",
+      representativeName: "",
+    }),
+    []
+  );
 
   const {
     fields: influencerChannels,
@@ -262,6 +266,20 @@ export const SignupRoleForm = () => {
 
     form.setValue("influencerChannels", []);
   }, [addChannel, form, influencerChannels.length, removeChannel, role]);
+
+  useEffect(() => {
+    if (role === "advertiser") {
+      const current = form.getValues("advertiserProfile");
+
+      if (!current) {
+        form.setValue("advertiserProfile", advertiserDefaults);
+      }
+
+      return;
+    }
+
+    form.setValue("advertiserProfile", undefined);
+  }, [advertiserDefaults, form, role]);
 
   const onSubmit = useCallback(
     async (values: SignupFormValues) => {

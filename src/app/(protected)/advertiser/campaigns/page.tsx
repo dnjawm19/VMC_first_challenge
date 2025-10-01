@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdvertiserCampaignDashboard } from "@/features/campaign-management/components/advertiser-campaign-dashboard";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 
 export default function AdvertiserCampaignsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useCurrentUser();
+  const role = getUserRole(user);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -16,12 +18,12 @@ export default function AdvertiserCampaignsPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.appMetadata?.role !== "advertiser") {
+    if (!isLoading && isAuthenticated && role !== "advertiser") {
       router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, isLoading, role, router]);
 
-  if (!isAuthenticated || user?.appMetadata?.role !== "advertiser") {
+  if (!isAuthenticated || role !== "advertiser") {
     return null;
   }
 

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardPlus } from "lucide-react";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 import { CampaignCreateForm } from "@/features/campaign-management/components/campaign-create-form";
 
 type CampaignCreatePageProps = {
@@ -21,6 +22,7 @@ export default function AdvertiserCampaignCreatePage({ params }: CampaignCreateP
 
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useCurrentUser();
+  const role = getUserRole(user);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -29,12 +31,12 @@ export default function AdvertiserCampaignCreatePage({ params }: CampaignCreateP
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.appMetadata?.role !== ROLE_ADVERTISER) {
+    if (!isLoading && isAuthenticated && role !== ROLE_ADVERTISER) {
       router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, isLoading, role, router]);
 
-  if (!isAuthenticated || user?.appMetadata?.role !== ROLE_ADVERTISER) {
+  if (!isAuthenticated || role !== ROLE_ADVERTISER) {
     return null;
   }
 

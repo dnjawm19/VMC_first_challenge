@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardPen } from "lucide-react";
 import { CampaignApplicationForm } from "@/features/campaigns/components/campaign-application-form";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 
 type CampaignApplyPageProps = {
   params: Promise<{ campaignId: string }>;
@@ -29,6 +30,8 @@ export default function CampaignApplyPage({ params }: CampaignApplyPageProps) {
     };
   }, [params]);
 
+  const role = getUserRole(user);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace(
@@ -40,10 +43,10 @@ export default function CampaignApplyPage({ params }: CampaignApplyPageProps) {
   }, [campaignId, isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.appMetadata?.role !== "influencer") {
+    if (!isLoading && isAuthenticated && role !== "influencer") {
       router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, isLoading, role, router]);
 
   if (!campaignId) {
     return (
@@ -53,7 +56,7 @@ export default function CampaignApplyPage({ params }: CampaignApplyPageProps) {
     );
   }
 
-  if (!isAuthenticated || user?.appMetadata?.role !== "influencer") {
+  if (!isAuthenticated || role !== "influencer") {
     return null;
   }
 

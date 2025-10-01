@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MyApplicationsSection } from "@/features/campaigns/components/my-applications-section";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 
 export default function MyApplicationsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useCurrentUser();
+  const role = getUserRole(user);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -16,12 +18,12 @@ export default function MyApplicationsPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.appMetadata?.role !== "influencer") {
+    if (!isLoading && isAuthenticated && role !== "influencer") {
       router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, isLoading, role, router]);
 
-  if (!isAuthenticated || user?.appMetadata?.role !== "influencer") {
+  if (!isAuthenticated || role !== "influencer") {
     return null;
   }
 

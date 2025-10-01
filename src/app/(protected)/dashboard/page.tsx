@@ -6,6 +6,7 @@ import Link from "next/link";
 import { match } from "ts-pattern";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 import { MyApplicationsSection } from "@/features/campaigns/components/my-applications-section";
 import { AdvertiserCampaignDashboard } from "@/features/campaign-management/components/advertiser-campaign-dashboard";
 
@@ -16,8 +17,7 @@ type DashboardPageProps = {
 const ROLE_INFLUENCER = "influencer" as const;
 const ROLE_ADVERTISER = "advertiser" as const;
 const CAMPAIGNS_PATH = "/campaigns" as const;
-const ADVERTISER_ONBOARDING_PATH = "/onboarding/advertiser" as const;
-const INFLUENCER_ONBOARDING_PATH = "/onboarding/influencer" as const;
+const PROFILE_PATH = "/profile" as const;
 
 export default function DashboardPage({ params }: DashboardPageProps) {
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     return null;
   }
 
-  const role = user?.appMetadata?.role ?? null;
+  const role = getUserRole(user);
   const email = user?.email ?? "알 수 없는 사용자";
 
   const roleContent = match(role)
@@ -68,16 +68,13 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     .otherwise(() => (
       <section className="space-y-6">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">역할 설정 필요</h2>
+          <h2 className="text-lg font-semibold text-slate-900">역할 정보를 확인해 주세요</h2>
           <p className="mt-2 text-sm text-slate-500">
-            먼저 인플루언서 또는 광고주 정보를 등록하면 대시보드 기능을 이용할 수 있습니다.
+            회원가입 시 입력한 역할 정보를 불러오는 중 문제가 발생했습니다. 프로필 페이지에서 정보를 확인하거나 수정해 주세요.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <Button asChild variant="outline">
-              <Link href={INFLUENCER_ONBOARDING_PATH}>인플루언서 정보 등록</Link>
-            </Button>
+          <div className="mt-4">
             <Button asChild>
-              <Link href={ADVERTISER_ONBOARDING_PATH}>광고주 정보 등록</Link>
+              <Link href={PROFILE_PATH}>프로필 페이지로 이동</Link>
             </Button>
           </div>
         </div>

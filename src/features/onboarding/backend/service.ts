@@ -51,22 +51,22 @@ export const createSignup = async (
   client: SupabaseClient,
   payload: SignupRequest
 ): Promise<HandlerResult<SignupResponse, OnboardingErrorCode, unknown>> => {
-  const { data: authData, error: authError } =
-    await client.auth.admin.createUser({
-      email: payload.email,
-      password: payload.password,
-      email_confirm: false,
-      user_metadata: {
+  const { data: signUpData, error: signUpError } = await client.auth.signUp({
+    email: payload.email,
+    password: payload.password,
+    options: {
+      data: {
         full_name: payload.fullName,
         role: payload.role,
       },
-    });
+    },
+  });
 
-  if (authError || !authData.user) {
-    const message = authError?.message ?? "계정 생성에 실패했습니다.";
+  if (signUpError || !signUpData.user) {
+    const message = signUpError?.message ?? "계정 생성에 실패했습니다.";
     const isDuplicate =
-      typeof authError?.message === "string" &&
-      authError.message.toLowerCase().includes("already registered");
+      typeof signUpError?.message === "string" &&
+      signUpError.message.toLowerCase().includes("already registered");
 
     return failure(
       400,
@@ -77,7 +77,22 @@ export const createSignup = async (
     );
   }
 
-  const userId = authData.user.id;
+  let userId = signUpData.user.id;
+
+  if (!userId) {
+    const { data: fetchedUser, error: fetchError } =
+      await client.auth.admin.getUserByEmail(payload.email);
+
+    if (fetchError || !fetchedUser?.user) {
+      return failure(
+        500,
+        onboardingErrorCodes.authCreationFailed,
+        fetchError?.message ?? "생성된 사용자를 조회하지 못했습니다.",
+      );
+    }
+
+    userId = fetchedUser.user.id;
+  }
   const normalizedPhone = payload.phone.replace(/[^0-9+]/g, "");
 
   const { error: profileError } = await client
@@ -176,8 +191,8 @@ export const createSignup = async (
   }
 
   const requiresEmailVerification =
-    authData.user.email_confirmed_at === null ||
-    authData.user.email_confirmed_at === undefined;
+    signUpData.user.email_confirmed_at === null ||
+    signUpData.user.email_confirmed_at === undefined;
 
   const response = SignupResponseSchema.parse({
     userId,

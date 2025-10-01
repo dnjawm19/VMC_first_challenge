@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BriefcaseBusiness } from "lucide-react";
 import { AdvertiserProfileForm } from "@/features/onboarding/components/advertiser-profile-form";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 
 type PageProps = {
   params: Promise<Record<string, string>>;
@@ -21,18 +22,18 @@ export default function AdvertiserOnboardingPage({ params }: PageProps) {
       return;
     }
 
-    const role = user?.appMetadata?.role;
+    const role = getUserRole(user);
 
     if (role && role !== "advertiser") {
       router.replace("/");
     }
-  }, [isAuthenticated, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, router, user]);
 
   if (!isAuthenticated) {
     return null;
   }
 
-  const role = user?.appMetadata?.role;
+  const role = getUserRole(user);
 
   if (role && role !== "advertiser") {
     return (

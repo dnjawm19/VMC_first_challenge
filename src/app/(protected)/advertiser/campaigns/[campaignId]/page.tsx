@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { getUserRole } from "@/features/auth/lib/get-user-role";
 import { CampaignManagementDetail } from "@/features/campaign-management/components/campaign-management-detail";
 
 export default function AdvertiserCampaignDetailPage({
@@ -13,6 +14,7 @@ export default function AdvertiserCampaignDetailPage({
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useCurrentUser();
   const [campaignId, setCampaignId] = useState<string | null>(null);
+  const role = getUserRole(user);
 
   useEffect(() => {
     let mounted = true;
@@ -39,12 +41,12 @@ export default function AdvertiserCampaignDetailPage({
   }, [campaignId, isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.appMetadata?.role !== "advertiser") {
+    if (!isLoading && isAuthenticated && role !== "advertiser") {
       router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, user?.appMetadata?.role]);
+  }, [isAuthenticated, isLoading, role, router]);
 
-  if (!campaignId || !isAuthenticated || user?.appMetadata?.role !== "advertiser") {
+  if (!campaignId || !isAuthenticated || role !== "advertiser") {
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-12">
         <div className="h-32 animate-pulse rounded-3xl bg-slate-200" />
