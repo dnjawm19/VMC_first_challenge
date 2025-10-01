@@ -7,11 +7,13 @@ import {
   type ApplicationStatusFilter,
 } from "@/features/campaigns/constants";
 import { useMyApplicationsQuery } from "@/features/campaigns/hooks/useMyApplicationsQuery";
-import { ApplicationStatusFilter as StatusFilter } from "@/features/campaigns/components/application-status-filter";
+import { ApplicationStatusFilterComponent as StatusFilter } from "@/features/campaigns/components/application-status-filter";
 import { ApplicationList } from "@/features/campaigns/components/application-list";
 
 export const MyApplicationsSection = () => {
-  const [status, setStatus] = useState<ApplicationStatusFilter>(APPLICATION_STATUS_FILTERS[0]);
+  const [status, setStatus] = useState<ApplicationStatusFilter>(
+    APPLICATION_STATUS_FILTERS[0]
+  );
   const { toast } = useToast();
 
   const queryParams = useMemo(

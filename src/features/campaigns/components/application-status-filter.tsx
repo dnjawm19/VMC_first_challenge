@@ -19,11 +19,17 @@ export type ApplicationStatusFilterProps = {
   onChange: (value: ApplicationStatusFilter) => void;
 };
 
-export const ApplicationStatusFilter = ({ value, onChange }: ApplicationStatusFilterProps) => {
+export const ApplicationStatusFilterComponent = ({
+  value,
+  onChange,
+}: ApplicationStatusFilterProps) => {
   const options = useMemo(() => APPLICATION_STATUS_FILTERS, []);
 
   return (
-    <Select value={value} onValueChange={(next) => onChange(next as ApplicationStatusFilter)}>
+    <Select
+      value={value}
+      onValueChange={(next) => onChange(next as ApplicationStatusFilter)}
+    >
       <SelectTrigger className="w-full sm:w-[160px]">
         <SelectValue placeholder="상태 필터" />
       </SelectTrigger>

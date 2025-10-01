@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { failure, success, type HandlerResult } from "@/backend/http/response";
+import {
+  failure,
+  success,
+  type HandlerResult,
+  type ErrorResult,
+} from "@/backend/http/response";
 import {
   onboardingErrorCodes,
   type OnboardingErrorCode,
@@ -35,16 +40,16 @@ const rollBackAuthUser = async (client: SupabaseClient, userId: string) => {
 
 const cleanUpUserRecords = async (client: SupabaseClient, userId: string) => {
   await Promise.all([
-    client.from(USER_TERMS_TABLE).delete().eq('user_id', userId),
-    client.from(ADVERTISER_PROFILES_TABLE).delete().eq('user_id', userId),
+    client.from(USER_TERMS_TABLE).delete().eq("user_id", userId),
+    client.from(ADVERTISER_PROFILES_TABLE).delete().eq("user_id", userId),
     client
       .from(INFLUENCER_CHANNELS_TABLE)
       .delete()
-      .eq('influencer_user_id', userId),
-    client.from(INFLUENCER_PROFILES_TABLE).delete().eq('user_id', userId),
+      .eq("influencer_user_id", userId),
+    client.from(INFLUENCER_PROFILES_TABLE).delete().eq("user_id", userId),
   ]);
 
-  await client.from(USER_PROFILES_TABLE).delete().eq('user_id', userId);
+  await client.from(USER_PROFILES_TABLE).delete().eq("user_id", userId);
 };
 
 export const createSignup = async (
@@ -80,18 +85,27 @@ export const createSignup = async (
   let userId = signUpData.user.id;
 
   if (!userId) {
-    const { data: fetchedUser, error: fetchError } =
-      await client.auth.admin.getUserByEmail(payload.email);
+    const { data: users, error: fetchError } =
+      await client.auth.admin.listUsers();
 
-    if (fetchError || !fetchedUser?.user) {
+    if (fetchError || !users?.users) {
       return failure(
         500,
         onboardingErrorCodes.authCreationFailed,
-        fetchError?.message ?? "생성된 사용자를 조회하지 못했습니다.",
+        fetchError?.message ?? "생성된 사용자를 조회하지 못했습니다."
       );
     }
 
-    userId = fetchedUser.user.id;
+    const user = users.users.find((u) => u.email === payload.email);
+    if (!user) {
+      return failure(
+        500,
+        onboardingErrorCodes.authCreationFailed,
+        "생성된 사용자를 찾을 수 없습니다."
+      );
+    }
+
+    userId = user.id;
   }
   const normalizedPhone = payload.phone.replace(/[^0-9+]/g, "");
 
@@ -137,44 +151,49 @@ export const createSignup = async (
     }
   }
 
-  if (payload.role === 'influencer' && !payload.influencerProfile) {
+  if (payload.role === "influencer" && !payload.influencerProfile) {
     await cleanUpUserRecords(client, userId);
     await rollBackAuthUser(client, userId);
 
     return failure(
       400,
       onboardingErrorCodes.validationError,
-      '인플루언서 채널 정보를 입력해 주세요.',
+      "인플루언서 채널 정보를 입력해 주세요."
     );
   }
 
-  if (payload.role === 'influencer' && payload.influencerProfile) {
+  if (payload.role === "influencer" && payload.influencerProfile) {
     const influencerResult = await upsertInfluencerProfile(client, userId, {
       birthDate: payload.birthDate,
       channels: payload.influencerProfile.channels,
     });
 
     if (!influencerResult.ok) {
-      const { status, error } = influencerResult;
+      const errorResult = influencerResult as ErrorResult<OnboardingErrorCode>;
       await cleanUpUserRecords(client, userId);
       await rollBackAuthUser(client, userId);
 
-      return failure(status, error.code, error.message, error.details);
+      return failure(
+        errorResult.status,
+        errorResult.error.code,
+        errorResult.error.message,
+        errorResult.error.details
+      );
     }
   }
 
-  if (payload.role === 'advertiser' && !payload.advertiserProfile) {
+  if (payload.role === "advertiser" && !payload.advertiserProfile) {
     await cleanUpUserRecords(client, userId);
     await rollBackAuthUser(client, userId);
 
     return failure(
       400,
       onboardingErrorCodes.validationError,
-      '광고주 정보를 입력해 주세요.',
+      "광고주 정보를 입력해 주세요."
     );
   }
 
-  if (payload.role === 'advertiser' && payload.advertiserProfile) {
+  if (payload.role === "advertiser" && payload.advertiserProfile) {
     const advertiserResult = await upsertAdvertiserProfile(
       client,
       userId,
@@ -182,11 +201,16 @@ export const createSignup = async (
     );
 
     if (!advertiserResult.ok) {
-      const { status, error } = advertiserResult;
+      const errorResult = advertiserResult as ErrorResult<OnboardingErrorCode>;
       await cleanUpUserRecords(client, userId);
       await rollBackAuthUser(client, userId);
 
-      return failure(status, error.code, error.message, error.details);
+      return failure(
+        errorResult.status,
+        errorResult.error.code,
+        errorResult.error.message,
+        errorResult.error.details
+      );
     }
   }
 
@@ -225,7 +249,9 @@ export const getInfluencerProfile = async (
 
   const { data: channelData, error: channelError } = await client
     .from(INFLUENCER_CHANNELS_TABLE)
-    .select("id, channel_type, channel_name, channel_url, status, follower_count")
+    .select(
+      "id, channel_type, channel_name, channel_url, status, follower_count"
+    )
     .eq("influencer_user_id", userId)
     .order("created_at", { ascending: true });
 

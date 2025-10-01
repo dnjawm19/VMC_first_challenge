@@ -1,13 +1,14 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   failure,
   success,
   type HandlerResult,
-} from '@/backend/http/response';
+  type ErrorResult,
+} from "@/backend/http/response";
 import {
   campaignErrorCodes,
   type CampaignErrorCode,
-} from '@/features/campaigns/backend/error';
+} from "@/features/campaigns/backend/error";
 import {
   AdvertiserCampaignListResponseSchema,
   CampaignCreateRequestSchema,
@@ -22,55 +23,51 @@ import {
   type CampaignManagementDetailResponse,
   type CampaignActionRequest,
   type CampaignActionResponse,
-} from '@/features/campaign-management/backend/schema';
+} from "@/features/campaign-management/backend/schema";
 import {
   ADVERTISER_CAMPAIGN_SORT_OPTIONS,
   CAMPAIGN_STATUS_OPTIONS,
-} from '@/features/campaign-management/constants';
+} from "@/features/campaign-management/constants";
 
-const CAMPAIGNS_TABLE = 'campaigns';
-const ADVERTISER_PROFILES_TABLE = 'advertiser_profiles';
-const CAMPAIGN_APPLICATIONS_TABLE = 'campaign_applications';
-const USER_PROFILES_TABLE = 'user_profiles';
+const CAMPAIGNS_TABLE = "campaigns";
+const ADVERTISER_PROFILES_TABLE = "advertiser_profiles";
+const CAMPAIGN_APPLICATIONS_TABLE = "campaign_applications";
+const USER_PROFILES_TABLE = "user_profiles";
 
 const mapSortOption = (
-  sort: (typeof ADVERTISER_CAMPAIGN_SORT_OPTIONS)[number],
+  sort: (typeof ADVERTISER_CAMPAIGN_SORT_OPTIONS)[number]
 ): {
   column: string;
   ascending: boolean;
 } => {
   switch (sort) {
-    case 'endingSoon':
-      return { column: 'recruitment_end_at', ascending: true };
-    case 'latest':
+    case "endingSoon":
+      return { column: "recruitment_end_at", ascending: true };
+    case "latest":
     default:
-      return { column: 'created_at', ascending: false };
+      return { column: "created_at", ascending: false };
   }
 };
 
 const ensureVerifiedAdvertiser = async (
   client: SupabaseClient,
-  userId: string,
+  userId: string
 ): Promise<HandlerResult<{ verified: boolean }, CampaignErrorCode>> => {
   const { data, error } = await client
     .from(ADVERTISER_PROFILES_TABLE)
-    .select('user_id')
-    .eq('user_id', userId)
+    .select("user_id")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
-    return failure(
-      500,
-      campaignErrorCodes.detailFetchFailed,
-      error.message,
-    );
+    return failure(500, campaignErrorCodes.detailFetchFailed, error.message);
   }
 
   if (!data) {
     return failure(
       403,
       campaignErrorCodes.validationError,
-      '광고주 정보 등록 후 체험단을 관리할 수 있습니다.',
+      "광고주 정보 등록 후 체험단을 관리할 수 있습니다."
     );
   }
 
@@ -98,7 +95,8 @@ const mapCampaignToDetail = (campaign: {
   benefits: campaign.benefits,
   mission: campaign.mission,
   storeInfo: campaign.store_info,
-  status: (campaign.status ?? 'recruiting') as (typeof CAMPAIGN_STATUS_OPTIONS)[number],
+  status: (campaign.status ??
+    "recruiting") as (typeof CAMPAIGN_STATUS_OPTIONS)[number],
   createdAt: campaign.created_at,
   updatedAt: campaign.updated_at,
 });
@@ -106,24 +104,24 @@ const mapCampaignToDetail = (campaign: {
 const fetchCampaignManagementDetail = async (
   client: SupabaseClient,
   campaignId: string,
-  advertiserId: string,
+  advertiserId: string
 ): Promise<
   HandlerResult<CampaignManagementDetailResponse, CampaignErrorCode, unknown>
 > => {
   const { data: campaign, error: campaignError } = await client
     .from(CAMPAIGNS_TABLE)
     .select(
-      'id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, created_at, updated_at',
+      "id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, created_at, updated_at"
     )
-    .eq('id', campaignId)
-    .eq('advertiser_user_id', advertiserId)
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", advertiserId)
     .maybeSingle();
 
   if (campaignError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      campaignError.message,
+      campaignError.message
     );
   }
 
@@ -131,28 +129,30 @@ const fetchCampaignManagementDetail = async (
     return failure(
       404,
       campaignErrorCodes.notFound,
-      '요청한 체험단을 찾을 수 없습니다.',
+      "요청한 체험단을 찾을 수 없습니다."
     );
   }
 
   const { data: applications, error: applicationsError } = await client
     .from(CAMPAIGN_APPLICATIONS_TABLE)
     .select(
-      'id, influencer_user_id, status, motivation, visit_plan_date, submitted_at',
+      "id, influencer_user_id, status, motivation, visit_plan_date, submitted_at"
     )
-    .eq('campaign_id', campaignId)
-    .order('submitted_at', { ascending: true });
+    .eq("campaign_id", campaignId)
+    .order("submitted_at", { ascending: true });
 
   if (applicationsError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      applicationsError.message,
+      applicationsError.message
     );
   }
 
   const influencerIds = Array.from(
-    new Set((applications ?? []).map((application) => application.influencer_user_id)),
+    new Set(
+      (applications ?? []).map((application) => application.influencer_user_id)
+    )
   );
 
   let profiles: Record<string, string | null> = {};
@@ -160,19 +160,19 @@ const fetchCampaignManagementDetail = async (
   if (influencerIds.length > 0) {
     const { data: profileRows, error: profileError } = await client
       .from(USER_PROFILES_TABLE)
-      .select('user_id, full_name')
-      .in('user_id', influencerIds);
+      .select("user_id, full_name")
+      .in("user_id", influencerIds);
 
     if (profileError) {
       return failure(
         500,
         campaignErrorCodes.detailFetchFailed,
-        profileError.message,
+        profileError.message
       );
     }
 
     profiles = Object.fromEntries(
-      (profileRows ?? []).map((row) => [row.user_id, row.full_name ?? null]),
+      (profileRows ?? []).map((row) => [row.user_id, row.full_name ?? null])
     );
   }
 
@@ -183,14 +183,17 @@ const fetchCampaignManagementDetail = async (
         applicationId: application.id,
         influencerId: application.influencer_user_id,
         influencerName: profiles[application.influencer_user_id] ?? null,
-        status: (application.status ?? 'applied') as 'applied' | 'selected' | 'rejected',
+        status: (application.status ?? "applied") as
+          | "applied"
+          | "selected"
+          | "rejected",
         motivation: application.motivation ?? null,
         visitPlanDate: application.visit_plan_date,
         submittedAt: application.submitted_at,
       })),
       actions: {
-        canCloseRecruitment: (campaign.status ?? 'recruiting') === 'recruiting',
-        canSelectApplicants: (campaign.status ?? 'recruiting') === 'closed',
+        canCloseRecruitment: (campaign.status ?? "recruiting") === "recruiting",
+        canSelectApplicants: (campaign.status ?? "recruiting") === "closed",
         capacity: campaign.capacity ?? 0,
       },
     },
@@ -202,8 +205,8 @@ const fetchCampaignManagementDetail = async (
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      '체험단 상세 응답이 올바르지 않습니다.',
-      parsed.error.format(),
+      "체험단 상세 응답이 올바르지 않습니다.",
+      parsed.error.format()
     );
   }
 
@@ -213,39 +216,40 @@ const fetchCampaignManagementDetail = async (
 export const getAdvertiserCampaigns = async (
   client: SupabaseClient,
   userId: string,
-  query: AdvertiserCampaignQuery,
+  query: AdvertiserCampaignQuery
 ): Promise<
   HandlerResult<AdvertiserCampaignListResponse, CampaignErrorCode, unknown>
 > => {
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    const { status, error } = advertiserResult;
-    return failure(status, error.code, error.message, error.details);
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
   }
 
-  const { column, ascending } = mapSortOption(query.sort ?? 'latest');
+  const { column, ascending } = mapSortOption(query.sort ?? "latest");
 
   let request = client
     .from(CAMPAIGNS_TABLE)
     .select(
-      'id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, created_at, updated_at',
+      "id, title, recruitment_start_at, recruitment_end_at, capacity, benefits, mission, store_info, status, created_at, updated_at"
     )
-    .eq('advertiser_user_id', userId)
+    .eq("advertiser_user_id", userId)
     .order(column, { ascending, nullsFirst: false });
 
   if (query.status) {
-    request = request.eq('status', query.status);
+    request = request.eq("status", query.status);
   }
 
   const { data, error } = await request;
 
   if (error) {
-    return failure(
-      500,
-      campaignErrorCodes.fetchFailed,
-      error.message,
-    );
+    return failure(500, campaignErrorCodes.fetchFailed, error.message);
   }
 
   const parsed = AdvertiserCampaignListResponseSchema.safeParse({
@@ -258,7 +262,7 @@ export const getAdvertiserCampaigns = async (
       benefits: item.benefits,
       mission: item.mission,
       storeInfo: item.store_info,
-      status: item.status ?? 'recruiting',
+      status: item.status ?? "recruiting",
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
@@ -271,8 +275,8 @@ export const getAdvertiserCampaigns = async (
     return failure(
       500,
       campaignErrorCodes.fetchFailed,
-      '체험단 목록 응답이 올바르지 않습니다.',
-      parsed.error.format(),
+      "체험단 목록 응답이 올바르지 않습니다.",
+      parsed.error.format()
     );
   }
 
@@ -282,13 +286,20 @@ export const getAdvertiserCampaigns = async (
 export const createCampaign = async (
   client: SupabaseClient,
   userId: string,
-  payload: CampaignCreateRequest,
-): Promise<HandlerResult<CampaignCreateResponse, CampaignErrorCode, unknown>> => {
+  payload: CampaignCreateRequest
+): Promise<
+  HandlerResult<CampaignCreateResponse, CampaignErrorCode, unknown>
+> => {
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    const { status, error } = advertiserResult;
-    return failure(status, error.code, error.message, error.details);
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
   }
 
   const parsed = CampaignCreateRequestSchema.safeParse(payload);
@@ -297,8 +308,8 @@ export const createCampaign = async (
     return failure(
       400,
       campaignErrorCodes.validationError,
-      '체험단 정보가 올바르지 않습니다.',
-      parsed.error.format(),
+      "체험단 정보가 올바르지 않습니다.",
+      parsed.error.format()
     );
   }
 
@@ -313,17 +324,17 @@ export const createCampaign = async (
       benefits: parsed.data.benefits,
       mission: parsed.data.mission,
       store_info: parsed.data.storeInfo,
-      status: 'recruiting',
+      status: "recruiting",
       thumbnail_url: parsed.data.thumbnailUrl ?? null,
     })
-    .select('id')
+    .select("id")
     .maybeSingle();
 
   if (error || !data) {
     return failure(
       500,
       campaignErrorCodes.fetchFailed,
-      error?.message ?? '체험단을 생성하지 못했습니다.',
+      error?.message ?? "체험단을 생성하지 못했습니다."
     );
   }
 
@@ -335,8 +346,8 @@ export const createCampaign = async (
     return failure(
       500,
       campaignErrorCodes.fetchFailed,
-      '체험단 생성 응답이 올바르지 않습니다.',
-      parsedResponse.error.format(),
+      "체험단 생성 응답이 올바르지 않습니다.",
+      parsedResponse.error.format()
     );
   }
 
@@ -346,15 +357,20 @@ export const createCampaign = async (
 export const getCampaignManagementDetail = async (
   client: SupabaseClient,
   userId: string,
-  campaignId: string,
+  campaignId: string
 ): Promise<
   HandlerResult<CampaignManagementDetailResponse, CampaignErrorCode, unknown>
 > => {
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    const { status, error } = advertiserResult;
-    return failure(status, error.code, error.message, error.details);
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
   }
 
   return fetchCampaignManagementDetail(client, campaignId, userId);
@@ -364,13 +380,20 @@ export const handleCampaignAction = async (
   client: SupabaseClient,
   userId: string,
   campaignId: string,
-  rawPayload: CampaignActionRequest,
-): Promise<HandlerResult<CampaignActionResponse, CampaignErrorCode, unknown>> => {
+  rawPayload: CampaignActionRequest
+): Promise<
+  HandlerResult<CampaignActionResponse, CampaignErrorCode, unknown>
+> => {
   const advertiserResult = await ensureVerifiedAdvertiser(client, userId);
 
   if (!advertiserResult.ok) {
-    const { status, error } = advertiserResult;
-    return failure(status, error.code, error.message, error.details);
+    const errorResult = advertiserResult as ErrorResult<CampaignErrorCode>;
+    return failure(
+      errorResult.status,
+      errorResult.error.code,
+      errorResult.error.message,
+      errorResult.error.details
+    );
   }
 
   const payload = CampaignActionRequestSchema.safeParse(rawPayload);
@@ -379,8 +402,8 @@ export const handleCampaignAction = async (
     return failure(
       400,
       campaignErrorCodes.validationError,
-      '요청 값이 올바르지 않습니다.',
-      payload.error.format(),
+      "요청 값이 올바르지 않습니다.",
+      payload.error.format()
     );
   }
 
@@ -388,16 +411,16 @@ export const handleCampaignAction = async (
 
   const { data: campaign, error: campaignError } = await client
     .from(CAMPAIGNS_TABLE)
-    .select('id, status, capacity')
-    .eq('id', campaignId)
-    .eq('advertiser_user_id', userId)
+    .select("id, status, capacity")
+    .eq("id", campaignId)
+    .eq("advertiser_user_id", userId)
     .maybeSingle();
 
   if (campaignError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      campaignError.message,
+      campaignError.message
     );
   }
 
@@ -405,68 +428,70 @@ export const handleCampaignAction = async (
     return failure(
       404,
       campaignErrorCodes.notFound,
-      '요청한 체험단을 찾을 수 없습니다.',
+      "요청한 체험단을 찾을 수 없습니다."
     );
   }
 
-  if (parsedPayload.action === 'closeRecruitment') {
-    if ((campaign.status ?? 'recruiting') !== 'recruiting') {
+  if (parsedPayload.action === "closeRecruitment") {
+    if ((campaign.status ?? "recruiting") !== "recruiting") {
       return failure(
         400,
         campaignErrorCodes.validationError,
-        '모집중인 체험단만 모집 종료할 수 있습니다.',
+        "모집중인 체험단만 모집 종료할 수 있습니다."
       );
     }
 
     const { error: updateError } = await client
       .from(CAMPAIGNS_TABLE)
-      .update({ status: 'closed' })
-      .eq('id', campaignId);
+      .update({ status: "closed" })
+      .eq("id", campaignId);
 
     if (updateError) {
       return failure(
         500,
         campaignErrorCodes.detailFetchFailed,
-        updateError.message,
+        updateError.message
       );
     }
 
     return fetchCampaignManagementDetail(client, campaignId, userId);
   }
 
-  if ((campaign.status ?? 'recruiting') !== 'closed') {
+  if ((campaign.status ?? "recruiting") !== "closed") {
     return failure(
       400,
       campaignErrorCodes.validationError,
-      '모집 종료된 체험단만 선정할 수 있습니다.',
+      "모집 종료된 체험단만 선정할 수 있습니다."
     );
   }
 
   const { data: applicants, error: applicantsError } = await client
     .from(CAMPAIGN_APPLICATIONS_TABLE)
-    .select('id, status')
-    .eq('campaign_id', campaignId);
+    .select("id, status")
+    .eq("campaign_id", campaignId);
 
   if (applicantsError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      applicantsError.message,
+      applicantsError.message
     );
   }
 
   const applicantRows = applicants ?? [];
-  const validApplicantIds = new Set(applicantRows.map((applicant) => applicant.id));
+  const validApplicantIds = new Set(
+    applicantRows.map((applicant) => applicant.id)
+  );
 
   const selectedIds = parsedPayload.applicantIds.filter((id) =>
-    validApplicantIds.has(id),
+    validApplicantIds.has(id)
   );
 
   if (selectedIds.length === 0) {
     return failure(
       400,
       campaignErrorCodes.validationError,
-      '선정할 지원자를 선택해 주세요.',
+      "선정할 지원자를 선택해 주세요."
     );
   }
 
@@ -474,55 +499,55 @@ export const handleCampaignAction = async (
     return failure(
       400,
       campaignErrorCodes.validationError,
-      '선정 인원이 모집 인원을 초과했습니다.',
+      "선정 인원이 모집 인원을 초과했습니다."
     );
   }
 
   const { error: selectError } = await client
     .from(CAMPAIGN_APPLICATIONS_TABLE)
-    .update({ status: 'selected' })
-    .in('id', selectedIds);
+    .update({ status: "selected" })
+    .in("id", selectedIds);
 
   if (selectError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      selectError.message,
+      selectError.message
     );
   }
 
   const rejectIds = applicantRows
     .filter(
       (applicant) =>
-        applicant.status === 'applied' && !selectedIds.includes(applicant.id),
+        applicant.status === "applied" && !selectedIds.includes(applicant.id)
     )
     .map((applicant) => applicant.id);
 
   if (rejectIds.length > 0) {
     const { error: rejectError } = await client
       .from(CAMPAIGN_APPLICATIONS_TABLE)
-      .update({ status: 'rejected' })
-      .in('id', rejectIds);
+      .update({ status: "rejected" })
+      .in("id", rejectIds);
 
     if (rejectError) {
       return failure(
         500,
         campaignErrorCodes.detailFetchFailed,
-        rejectError.message,
+        rejectError.message
       );
     }
   }
 
   const { error: statusUpdateError } = await client
     .from(CAMPAIGNS_TABLE)
-    .update({ status: 'selected' })
-    .eq('id', campaignId);
+    .update({ status: "selected" })
+    .eq("id", campaignId);
 
   if (statusUpdateError) {
     return failure(
       500,
       campaignErrorCodes.detailFetchFailed,
-      statusUpdateError.message,
+      statusUpdateError.message
     );
   }
 
